@@ -220,7 +220,7 @@ data class Diary(
 )
 
 // 날짜 포맷
-fun formatDateWithDayOfWeek(date: Long): String {
+fun formatDateWithDayOfWeek(date: LocalDate): String {
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))
     return "$formattedDate $dayOfWeek"

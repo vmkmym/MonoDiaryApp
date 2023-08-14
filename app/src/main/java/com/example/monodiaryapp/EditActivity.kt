@@ -1,19 +1,16 @@
 package com.example.monodiaryapp
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -22,34 +19,20 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
 
 class EditActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +43,7 @@ class EditActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen2() // HomeScreen2 호출 추가
+                    HomeScreen2()
                 }
             }
         }
@@ -69,32 +52,15 @@ class EditActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyCenteredTopAppBar2(
-    title: String,
-    navigationIcon: @Composable () -> Unit,
-    actionIcon: @Composable () -> Unit
-) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp)
-            )
-        },
-        navigationIcon = navigationIcon,
-        actions = {
-            actionIcon()
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun HomeScreen2() {
     val lastModifiedState = remember { mutableStateOf(formatDateWithDayOfWeek(System.currentTimeMillis())) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { _ ->
+            // Handle selected uris
+        }
+    )
 
     Scaffold(
         topBar = {
@@ -120,6 +86,7 @@ fun HomeScreen2() {
         },
         bottomBar = { // BottomAppBar 추가
             MyBottomAppBar(
+                launcher,
                 navigationIcon = {
                     IconButton(onClick = { /* 현재 작성 중인 화면이 저장이 되지 않고 삭제됨 */ }) {
                         Icon(
@@ -137,7 +104,9 @@ fun HomeScreen2() {
                     }
                 },
                 actionIcon2 = {
-                    IconButton(onClick = { /* 갤러리 접근 권한, 이미지 단일, 복수 가져오기 */ }) {
+                    IconButton(
+                        onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Favorite,
                             contentDescription = "이미지 변경"
@@ -154,7 +123,7 @@ fun HomeScreen2() {
                 },
                 actionIcon4 = {
                     IconButton(onClick = {
-                    /* Handle action icon click */
+                        /* Handle action icon click */
                         lastModifiedState.value = formatDateWithDayOfWeek(System.currentTimeMillis())
                     }) {
                         Icon(
@@ -179,13 +148,12 @@ fun HomeScreen2() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditDiaryScreen() {
+fun EditDiaryScreen(lastModified: String) {
+
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
     var singerNameState by remember { mutableStateOf(TextFieldValue()) }
-
-    var context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -246,7 +214,7 @@ fun EditDiaryScreen() {
             )
             TextField(
                 value = singerNameState,
-                onValueChange = { songNameState = it },
+                onValueChange = { singerNameState = it },
                 label = { Text("가수를 입력하세요") },
                 colors = TextFieldDefaults.textFieldColors(
                     containerColor = Color.Transparent
@@ -255,15 +223,15 @@ fun EditDiaryScreen() {
         }
         // 작성 날짜와 시간 칸
         Text(
-            text = "$lastModified",
+            text = lastModified,
             modifier = Modifier.fillMaxWidth()
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyBottomAppBar(
+    launcher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>, // launcher의 타입을 변경
     navigationIcon: @Composable () -> Unit,
     actionIcon1: @Composable () -> Unit,
     actionIcon2: @Composable () -> Unit,
@@ -286,6 +254,30 @@ fun MyBottomAppBar(
             actionIcon4()
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyCenteredTopAppBar2(
+    title: String,
+    navigationIcon: @Composable () -> Unit,
+    actionIcon: @Composable () -> Unit
+) {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp)
+            )
+        },
+        navigationIcon = navigationIcon,
+        actions = {
+            actionIcon()
+        }
+    )
 }
 
 @Preview(showBackground = true)
