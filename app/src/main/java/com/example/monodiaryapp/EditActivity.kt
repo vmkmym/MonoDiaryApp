@@ -1,5 +1,6 @@
 package com.example.monodiaryapp
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -26,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +57,7 @@ class EditActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen2(mediaLauncher)
+                    HomeScreen2(mediaLauncher, this)
                 }
             }
         }
@@ -65,7 +67,8 @@ class EditActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen2(
-    mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>
+    mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
+    context: Context // Context를 파라미터로 추가
 ) {
     // 마지막 수정 상태 기억
     val lastModifiedState: MutableState<LocalDate> = remember { mutableStateOf((LocalDate.now())) }
@@ -77,7 +80,10 @@ fun HomeScreen2(
             MyCenteredTopAppBar2(
                 title = "Today",
                 navigationIcon = {
-                    IconButton(onClick = { /* 홈액티비티가 나오게 화면 전환 */ }) {
+                    IconButton(onClick = {
+                        val intent = Intent(context, HomeActivity::class.java)
+                        context.startActivity(intent)
+                    }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Localized description"
@@ -337,6 +343,6 @@ fun HomeScreen2Preview() {
         }
     )
     MonoDiaryAppTheme {
-        HomeScreen2(mediaLauncher)
+        HomeScreen2(mediaLauncher, LocalContext.current)
     }
 }
