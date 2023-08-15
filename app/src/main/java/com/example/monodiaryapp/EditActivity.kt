@@ -16,8 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowRight
@@ -57,7 +57,8 @@ class EditActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen2(mediaLauncher, this)
+                    val isScreenClosed = remember { mutableStateOf(false) }
+                    HomeScreen2(mediaLauncher, isScreenClosed, this)
                 }
             }
         }
@@ -68,7 +69,8 @@ class EditActivity : ComponentActivity() {
 @Composable
 fun HomeScreen2(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
-    context: Context // Context를 파라미터로 추가
+    isScreenClosed: MutableState<Boolean>,
+    context: Context
 ) {
     // 마지막 수정 상태 기억
     val lastModifiedState: MutableState<LocalDate> = remember { mutableStateOf((LocalDate.now())) }
@@ -91,52 +93,67 @@ fun HomeScreen2(
                     }
                 },
                 actionIcon = {
-                    IconButton(onClick = { /* 내용이 저장되는 버튼 */ }) {
+                    IconButton(onClick = { /*
+                        val intent = Intent(context, UserActivity::class.java)
+                        context.startActivity(intent)
+                    사용자 프로필 액티비티로 이동 */
+                    }) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Default.AccountCircle,
                             contentDescription = "Localized description"
                         )
                     }
                 }
             )
         },
-        bottomBar = { // BottomAppBar 추가
-            MyBottomAppBar(
-                navigationIcon = {
-                    IconButton ( onClick = { /* 현재 작성 중인 화면이 저장이 되지 않고 삭제됨 */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "삭제"
-                        )
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.primary)
+                    .fillMaxWidth()
+                    .height(56.dp)
+            ) {
+                MyBottomAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            // 내용 저장하지 않고 화면 닫기
+                            isScreenClosed.value = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "삭제"
+                            )
+                        }
+                    },
+                    actionIcon1 = {
+                        IconButton(onClick = { /* 본문 내용 복사하기 */ }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "내용복사"
+                            )
+                        }
+                    },
+                    actionIcon2 = {
+                        IconButton(onClick = { /* 현재 내용 자동 저장 후 갤러리로 화면 전환 */ }) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowRight,
+                                contentDescription = "갤러리로 이동"
+                            )
+                        }
+                    },
+                    actionIcon3 = {
+                        IconButton(onClick = {
+                            lastModifiedState.value = LocalDate.now()
+                        }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Create,
+                                contentDescription = "내용 수정"
+                            )
+                        }
                     }
-                },
-                actionIcon1 = {
-                    IconButton(onClick = { /* 본문 내용 복사하기 */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "내용복사"
-                        )
-                    }
-                },
-                actionIcon2 = {
-                    IconButton(onClick = { /* 현재 내용 자동 저장 후 갤러리로 화면 전환 */ }) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "갤러리로 이동"
-                        )
-                    }
-                },
-                actionIcon3 = {
-                    IconButton(onClick = {
-                        lastModifiedState.value = LocalDate.now() }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Create,
-                            contentDescription = "내용 수정"
-                        )
-                    }
-                }
-            )
+                )
+            }
         },
         // 레이지 컬럼으로 해야할 듯?
         content = { innerPadding ->
@@ -145,8 +162,7 @@ fun HomeScreen2(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher)
-                // EditDiaryScreen 호출 시에 launcher를 전달
+                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher, isScreenClosed, context)
             }
         }
     )
@@ -158,13 +174,22 @@ fun HomeScreen2(
 fun EditDiaryScreen(
     lastModified: LocalDate,
     selectedImageUris: List<Uri>,
-    launcher: ActivityResultLauncher<PickVisualMediaRequest>
+    launcher: ActivityResultLauncher<PickVisualMediaRequest>,
+    isScreenClosed: MutableState<Boolean>,
+    context: Context
 ) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
 
     var updatedSelectedImageUris by remember { mutableStateOf(selectedImageUris) }
+
+    if (isScreenClosed.value) {
+        // isScreenClosed 값이 true일 경우 화면을 닫고 HomeActivity로 이동
+        val intent = Intent(context, HomeActivity::class.java)
+        context.startActivity(intent)
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -178,8 +203,7 @@ fun EditDiaryScreen(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp),
+                .background(MaterialTheme.colorScheme.surface),
             colors = TextFieldDefaults.textFieldColors(
                 containerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
@@ -192,6 +216,9 @@ fun EditDiaryScreen(
             onValueChange = { songNameState = it },
             label = { Text("오늘의 bgm은?") },
             singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface),
             colors = TextFieldDefaults.textFieldColors(
                 containerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
@@ -215,8 +242,7 @@ fun EditDiaryScreen(
             label = { Text("일기 내용을 적어보세요 :) ") },
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp),
+                .background(MaterialTheme.colorScheme.surface),
             colors = TextFieldDefaults.textFieldColors(
                 containerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
@@ -233,7 +259,7 @@ fun EditDiaryScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp),
+                .padding(8.dp)
         )
     }
 }
@@ -247,12 +273,13 @@ fun MyBottomAppBar(
     actionIcon3: @Composable () -> Unit,
 ) {
     BottomAppBar(
-        contentPadding = PaddingValues(horizontal = 12.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp),
         modifier = Modifier.background(MaterialTheme.colorScheme.primary)
-    ) {
+        ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .background(Color.White),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             navigationIcon()
@@ -331,8 +358,6 @@ fun ImageList(
     }
 }
 
-
-
 @Preview(showBackground = true)
 @Composable
 fun HomeScreen2Preview() {
@@ -342,7 +367,9 @@ fun HomeScreen2Preview() {
             // ...
         }
     )
+    val isScreenClosedState = remember { mutableStateOf(false) } // remember를 사용하여 상태 정의
+
     MonoDiaryAppTheme {
-        HomeScreen2(mediaLauncher, LocalContext.current)
+        HomeScreen2(mediaLauncher, isScreenClosedState, LocalContext.current)
     }
 }
