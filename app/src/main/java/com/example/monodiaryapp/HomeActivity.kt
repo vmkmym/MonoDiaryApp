@@ -153,17 +153,10 @@ fun DiaryItem(diary: Diary) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 이미지는 아직 미구현이라 대체로 처리
-            Image(
-                painter = painterResource(id = R.drawable.hhh),
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .size(120.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            ImagePreview() // ImagePreview 함수로 이미지 코드 대체
+
             Spacer(modifier = Modifier.width(10.dp))
+
             Column(
                 verticalArrangement = Arrangement.Top
             ) {
@@ -172,19 +165,25 @@ fun DiaryItem(diary: Diary) {
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 20.sp)
                 )
+
                 Spacer(modifier = Modifier.height(3.dp))
+
                 Text(
                     text = diary.content.firstLineOrMaxLength(50),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 16.sp)
                 )
+
                 Spacer(modifier = Modifier.height(5.dp))
+
                 Text(
                     text = "${diary.songTitle} - ${diary.artist}",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                 )
+
                 Spacer(modifier = Modifier.height(3.dp))
+
                 Text(
                     text = "작성일: ${formatDateWithDayOfWeek(diary.date)}",
                     fontWeight = FontWeight.Bold,
@@ -225,6 +224,21 @@ fun formatDateWithDayOfWeek(date: LocalDate): String {
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))
     return "$formattedDate $dayOfWeek"
 }
+
+// 이미지 동기화 하기 위한 함수
+@Composable
+fun ImagePreview() {
+    Image(
+        painter = painterResource(id = R.drawable.hhh), // 공통 이미지 리소스 사용
+        contentDescription = null,
+        modifier = Modifier
+            .padding(16.dp)
+            .size(120.dp)
+            .clip(CircleShape),
+        contentScale = ContentScale.Crop
+    )
+}
+
 
 
 // 일기 드래그해서 삭제하기 (슬랙 링크 확인)

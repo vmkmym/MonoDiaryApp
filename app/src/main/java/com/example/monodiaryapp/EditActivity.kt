@@ -1,31 +1,33 @@
 package com.example.monodiaryapp
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,8 +35,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 
 class EditActivity : ComponentActivity() {
+    private val mediaLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        uri?.let { selectedUri ->
+            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            applicationContext.contentResolver.takePersistableUriPermission(selectedUri, flag)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -43,7 +55,7 @@ class EditActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen2()
+                    HomeScreen2(mediaLauncher)
                 }
             }
         }
@@ -52,15 +64,13 @@ class EditActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen2() {
-    val lastModifiedState = remember { mutableStateOf(formatDateWithDayOfWeek(System.currentTimeMillis())) }
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { _ ->
-            // Handle selected uris
-        }
-    )
+fun HomeScreen2(
+    mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>
+) {
+    // 마지막 수정 상태 기억
+    val lastModifiedState: MutableState<LocalDate> = remember { mutableStateOf((LocalDate.now())) }
+    // 이미지 Uri 상태
+    val selectedImageUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
 
     Scaffold(
         topBar = {
@@ -86,9 +96,8 @@ fun HomeScreen2() {
         },
         bottomBar = { // BottomAppBar 추가
             MyBottomAppBar(
-                launcher,
                 navigationIcon = {
-                    IconButton(onClick = { /* 현재 작성 중인 화면이 저장이 되지 않고 삭제됨 */ }) {
+                    IconButton ( onClick = { /* 현재 작성 중인 화면이 저장이 되지 않고 삭제됨 */ }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "삭제"
@@ -99,21 +108,11 @@ fun HomeScreen2() {
                     IconButton(onClick = { /* 본문 내용 복사하기 */ }) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "복사"
+                            contentDescription = "내용복사"
                         )
                     }
                 },
                 actionIcon2 = {
-                    IconButton(
-                        onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "이미지 변경"
-                        )
-                    }
-                },
-                actionIcon3 = {
                     IconButton(onClick = { /* 현재 내용 자동 저장 후 갤러리로 화면 전환 */ }) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowRight,
@@ -121,11 +120,10 @@ fun HomeScreen2() {
                         )
                     }
                 },
-                actionIcon4 = {
+                actionIcon3 = {
                     IconButton(onClick = {
-                        /* Handle action icon click */
-                        lastModifiedState.value = formatDateWithDayOfWeek(System.currentTimeMillis())
-                    }) {
+                        lastModifiedState.value = LocalDate.now() }
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Create,
                             contentDescription = "내용 수정"
@@ -134,109 +132,113 @@ fun HomeScreen2() {
                 }
             )
         },
+        // 레이지 컬럼으로 해야할 듯?
         content = { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                EditDiaryScreen(lastModifiedState.value)
+                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher)
+                // EditDiaryScreen 호출 시에 launcher를 전달
             }
         }
     )
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditDiaryScreen(lastModified: String) {
-
+fun EditDiaryScreen(
+    lastModified: LocalDate,
+    selectedImageUris: List<Uri>,
+    launcher: ActivityResultLauncher<PickVisualMediaRequest>
+) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
-    var singerNameState by remember { mutableStateOf(TextFieldValue()) }
+
+    var updatedSelectedImageUris by remember { mutableStateOf(selectedImageUris) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
         // 일기 제목 텍스트 필드
         TextField(
             value = titleState,
             onValueChange = { titleState = it },
-            label = { Text("제목을 입력하세요") },
+            label = { Text("일기 제목을 적어보세요!") },
             singleLine = true,
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.Transparent
-            )
-        )
-
-        // 이미지 (기본값 이미지)
-        Image(
-            painter = painterResource(id = R.drawable.hhh),
-            contentDescription = null,
-            modifier = Modifier
-                .padding(16.dp)
-                .background(MaterialTheme.colorScheme.surface)
-                .size(200.dp)
-                .align(Alignment.CenterHorizontally),
-            contentScale = ContentScale.Crop
-        )
-
-        TextField(
-            value = mainTextState,
-            onValueChange = { mainTextState = it },
-            label = { Text("내용을 입력하세요") },
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(8.dp),
             colors = TextFieldDefaults.textFieldColors(
+                containerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
+        // bgm 텍스트 필드
+        TextField(
+            value = songNameState,
+            onValueChange = { songNameState = it },
+            label = { Text("오늘의 bgm은?") },
+            singleLine = true,
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = Color.Transparent,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
+        // 이미지 가져오기
+        ImageList(
+            selectedImageUris = updatedSelectedImageUris,
+            onImageSelected = { selectedUri ->
+                updatedSelectedImageUris = updatedSelectedImageUris.toMutableList().apply {
+                    add(selectedUri)
+                }
+            },
+            launcher = launcher
+        )
+
+        TextField(
+            value = mainTextState,
+            onValueChange = { mainTextState = it },
+            label = { Text("일기 내용을 적어보세요 :) ") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp),
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
 
-        // 노래 제목과 가수 텍스트 필드
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = songNameState,
-                onValueChange = { songNameState = it },
-                label = { Text("음악을 입력하세요") },
-                singleLine = true,
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = Color.Transparent
-                )
-            )
-            TextField(
-                value = singerNameState,
-                onValueChange = { singerNameState = it },
-                label = { Text("가수를 입력하세요") },
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        }
-        // 작성 날짜와 시간 칸
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val formattedLastModified = lastModified.format(dateFormatter)
+
         Text(
-            text = lastModified,
-            modifier = Modifier.fillMaxWidth()
+            text = lastModified.toString(),
+            fontStyle = FontStyle.Italic,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp),
         )
     }
 }
 
+
 @Composable
 fun MyBottomAppBar(
-    launcher: ManagedActivityResultLauncher<PickVisualMediaRequest, Uri?>, // launcher의 타입을 변경
     navigationIcon: @Composable () -> Unit,
     actionIcon1: @Composable () -> Unit,
     actionIcon2: @Composable () -> Unit,
     actionIcon3: @Composable () -> Unit,
-    actionIcon4: @Composable () -> Unit,
 ) {
     BottomAppBar(
         contentPadding = PaddingValues(horizontal = 12.dp),
@@ -251,7 +253,6 @@ fun MyBottomAppBar(
             actionIcon1()
             actionIcon2()
             actionIcon3()
-            actionIcon4()
         }
     }
 }
@@ -280,10 +281,62 @@ fun MyCenteredTopAppBar2(
     )
 }
 
+
+@Composable
+fun ImageList(
+    selectedImageUris: List<Uri>,
+    onImageSelected: (Uri) -> Unit, // onImageSelected 함수 파라미터 추가
+    launcher: ActivityResultLauncher<PickVisualMediaRequest>
+) {
+    val imageModifier = Modifier
+        .clickable {
+            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+        }
+        .padding(10.dp)
+        .background(MaterialTheme.colorScheme.surface)
+        .fillMaxWidth()
+
+    LazyColumn {
+        item {
+            // 이미지 (기본값 이미지 또는 선택한)
+            if (selectedImageUris.isNotEmpty()) {
+                selectedImageUris.forEachIndexed { index, uri ->
+                    Image(
+                        painter = painterResource(id = R.drawable.hhh),
+                        contentDescription = null,
+                        modifier = imageModifier.clickable { onImageSelected(uri) },
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            } else {
+                // 기본 이미지 리소스 사용
+                val imagePainter = painterResource(id = R.drawable.hhh)
+
+                Image(
+                    painter = imagePainter,
+                    contentDescription = null,
+                    modifier = imageModifier.clickable {
+                        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                    },
+                    contentScale = ContentScale.FillWidth
+                )
+            }
+        }
+    }
+}
+
+
+
 @Preview(showBackground = true)
 @Composable
-fun EditPreview() {
+fun HomeScreen2Preview() {
+    val mediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { result ->
+            // ...
+        }
+    )
     MonoDiaryAppTheme {
-        HomeScreen2()
+        HomeScreen2(mediaLauncher)
     }
 }
