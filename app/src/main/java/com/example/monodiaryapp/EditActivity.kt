@@ -1,5 +1,7 @@
 package com.example.monodiaryapp
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -40,6 +42,10 @@ import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+// 코드 개선은 일단 다 만들고 제일 마지막에 하기
+// 룸 라이브러리, firebase 이벤트로깅
+// 프로필 액티비티 추가 (선택)
+// 갤러리 액티비티 만들기 (Lazy and Grid docs 참고)
 
 class EditActivity : ComponentActivity() {
     private val mediaLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
@@ -76,11 +82,14 @@ fun HomeScreen2(
     val lastModifiedState: MutableState<LocalDate> = remember { mutableStateOf((LocalDate.now())) }
     // 이미지 Uri 상태
     val selectedImageUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
+    // mainTextState 변수 선언
+    val mainTextState by remember { mutableStateOf(TextFieldValue()) }
 
     Scaffold(
         topBar = {
             MyCenteredTopAppBar2(
                 title = "Today",
+                // 뒤로 가기 (내용저장, 리스트랑 연결)
                 navigationIcon = {
                     IconButton(onClick = {
                         val intent = Intent(context, HomeActivity::class.java)
@@ -92,6 +101,7 @@ fun HomeScreen2(
                         )
                     }
                 },
+                // 사용자 프로필로 이동
                 actionIcon = {
                     IconButton(onClick = { /*
                         val intent = Intent(context, UserActivity::class.java)
@@ -114,9 +124,9 @@ fun HomeScreen2(
                     .height(56.dp)
             ) {
                 MyBottomAppBar(
+                    // 내용 저장하지 않고 화면 닫기
                     navigationIcon = {
                         IconButton(onClick = {
-                            // 내용 저장하지 않고 화면 닫기
                             isScreenClosed.value = true
                         }) {
                             Icon(
@@ -125,25 +135,38 @@ fun HomeScreen2(
                             )
                         }
                     },
+                    // 본문 내용 복사하기 (복사 완료 카드가 안 예쁨 -> 수정하기)
                     actionIcon1 = {
-                        IconButton(onClick = { /* 본문 내용 복사하기 */ }) {
+                        IconButton(onClick = {
+                            // mainTextState의 내용을 복사
+                            val copiedText = mainTextState.text
+                            // 복사된 내용을 ClipboardManager를 사용하여 클립보드에 복사
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("Copied Text", copiedText)
+                            clipboard.setPrimaryClip(clip)
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Share,
                                 contentDescription = "내용복사"
                             )
                         }
                     },
+                    // 이 버튼을 누르면 변동 사항 저장된 후 갤러리로 이동
                     actionIcon2 = {
-                        IconButton(onClick = { /* 현재 내용 자동 저장 후 갤러리로 화면 전환 */ }) {
+                        IconButton(onClick = {
+                            // 갤러리를 만들고 하기?
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowRight,
                                 contentDescription = "갤러리로 이동"
                             )
                         }
                     },
+                    // 내용 수정 버튼을 눌러야 수정을 할 수 있음 (또 누를 필요는 없음)
                     actionIcon3 = {
                         IconButton(onClick = {
                             lastModifiedState.value = LocalDate.now()
+                            // 하자
                         }
                         ) {
                             Icon(
@@ -155,14 +178,13 @@ fun HomeScreen2(
                 )
             }
         },
-        // 레이지 컬럼으로 해야할 듯?
         content = { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher, isScreenClosed, context)
+                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher, isScreenClosed, context, mainTextState)
             }
         }
     )
@@ -176,7 +198,8 @@ fun EditDiaryScreen(
     selectedImageUris: List<Uri>,
     launcher: ActivityResultLauncher<PickVisualMediaRequest>,
     isScreenClosed: MutableState<Boolean>,
-    context: Context
+    context: Context,
+    mainTextState: TextFieldValue
 ) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
