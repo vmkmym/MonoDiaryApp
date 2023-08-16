@@ -39,11 +39,19 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import com.example.monodiaryapp.data.DiaryDao
+import com.example.monodiaryapp.data.DiaryDatabase
 
 
 class HomeActivity : ComponentActivity() {
+    private lateinit var diaryDao: DiaryDao // Declare DiaryDao
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val database = DiaryDatabase.getDatabase(this)
+        diaryDao = database.diaryDao()
+
         setContent {
             MonoDiaryAppTheme {
                 HomeScreen()

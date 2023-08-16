@@ -38,14 +38,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.monodiaryapp.data.DiaryDao
+import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-// 코드 개선은 일단 다 만들고 제일 마지막에 하기
-// 룸 라이브러리, firebase 이벤트로깅
-// 프로필 액티비티 추가 (선택)
-// 갤러리 액티비티 만들기 (Lazy and Grid docs 참고)
 
 class EditActivity : ComponentActivity() {
     private val mediaLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
@@ -54,6 +51,8 @@ class EditActivity : ComponentActivity() {
             applicationContext.contentResolver.takePersistableUriPermission(selectedUri, flag)
         }
     }
+
+    private lateinit var diaryDao: DiaryDao // Declare DiaryDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +66,8 @@ class EditActivity : ComponentActivity() {
                     HomeScreen2(mediaLauncher, isScreenClosed, this)
                 }
             }
+            val database = DiaryDatabase.getDatabase(this)
+            diaryDao = database.diaryDao() // Initialize DiaryDao
         }
     }
 }
@@ -166,7 +167,8 @@ fun HomeScreen2(
                     actionIcon3 = {
                         IconButton(onClick = {
                             lastModifiedState.value = LocalDate.now()
-                            // 하자
+                            // 이 버튼을 누르면 내용을 수정할 수 있음
+                            // 처음
                         }
                         ) {
                             Icon(

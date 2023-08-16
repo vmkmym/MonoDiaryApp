@@ -19,7 +19,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import com.example.monodiaryapp.data.DiaryDatabase
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,17 +30,26 @@ class MainActivity : ComponentActivity() {
         setContent {
             MonoDiaryAppTheme {
                 LaunchedEffect(true) {
-                    // 5초 후 홈 액티비티로 전환
-                    delay(5000)
-                    val intent = Intent(this@MainActivity, HomeActivity::class.java)
-                    startActivity(intent)
-                    finish()
+                    val diaryDatabase = DiaryDatabase.getDatabase(this@MainActivity)
+                    val diaryDao = diaryDatabase.diaryDao()
+
+                    lifecycleScope.launch {
+                        val allEntries = diaryDao.getAllEntries().collect { entries ->
+                            // entries를 처리하거나 UI에 업데이트할 수 있음
+                        }
+
+                        delay(5000)
+                        val intent = Intent(this@MainActivity, HomeActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    }
                 }
                 ShowInitialScreen()
             }
         }
     }
 }
+
 
 @Composable
 fun ShowInitialScreen() {
