@@ -12,21 +12,21 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DiaryDao {
     @Query("SELECT * FROM DiaryEntry ORDER BY date DESC")
-    fun getAllEntries(): Flow<List<DiaryEntry>>
+    fun getAll(): Flow<List<DiaryEntry>>
 
     @Query("SELECT * FROM DiaryEntry WHERE uid = :entryId")
-    fun getEntryById(entryId: Long): Flow<DiaryEntry?>
+    fun loadAllByIds(entryId: Long): Flow<DiaryEntry?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: DiaryEntry)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(diaryEntry: DiaryEntry)
+    fun insertAll(diaryEntry: DiaryEntry)
 
     @Delete
-    suspend fun deleteEntry(entry: DiaryEntry)
+    fun delete(entry: DiaryEntry)
 
     @Update
-    suspend fun updateEntry(entry: DiaryEntry)
+    fun update(entry: DiaryEntry)
 }
 

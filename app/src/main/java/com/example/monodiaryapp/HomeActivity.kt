@@ -128,13 +128,6 @@ fun HomeScreen() {
 @Composable
 fun DiaryList() {
     val diaryList = listOf(
-        Diary("일기 제목 1", "일기 본문 첫 줄...", "노래 제목 1", "아티스트 1", LocalDate.parse("2023-08-01")),
-        Diary("일기 제목 2", "일기 본문 첫 줄...", "노래 제목 2", "아티스트 2", LocalDate.parse("2023-08-12")),
-        Diary("일기 제목 3", "일기 본문 첫 줄...", "노래 제목 3", "아티스트 3", LocalDate.parse("2023-08-11")),
-        Diary("일기 제목 4", "일기 본문 첫 줄...", "노래 제목 4", "아티스트 4", LocalDate.parse("2023-08-10")),
-        Diary("일기 제목 5", "일기 본문 첫 줄...", "노래 제목 5", "아티스트 5", LocalDate.parse("2023-08-09")),
-        Diary("일기 제목 6", "일기 본문 첫 줄...", "노래 제목 6", "아티스트 6", LocalDate.parse("2023-08-08")),
-        Diary("일기 제목 7", "일기 본문 첫 줄...", "노래 제목 7", "아티스트 7", LocalDate.parse("2023-08-06")),
         Diary("일기 제목 7", "일기 본문 첫 줄...", "노래 제목 7", "아티스트 7", LocalDate.parse("2023-08-05")),
         Diary("일기 제목 7", "일기 본문 첫 줄...", "노래 제목 7", "아티스트 7", LocalDate.parse("2023-08-04")),
         ).sortedByDescending { it.date }

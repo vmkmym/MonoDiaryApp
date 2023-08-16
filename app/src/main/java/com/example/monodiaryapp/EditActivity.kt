@@ -117,6 +117,7 @@ fun HomeScreen2(
                 // 뒤로 가기 (내용저장, 리스트랑 연결)
                 navigationIcon = {
                     IconButton(onClick = {
+
                         val newDiary = DiaryEntry(
                             title = titleState.text,
                             content = mainTextState.text,
@@ -125,7 +126,7 @@ fun HomeScreen2(
                             songTitle = songNameState.text,
                             date = lastModifiedState.value.toString()
                         )
-                        diaryDao.insert(newDiary)
+                        diaryDao.insertAll(newDiary)
 
                         val intent = Intent(context, HomeActivity::class.java)
                         context.startActivity(intent)
@@ -248,13 +249,18 @@ fun EditDiaryScreen(
     context: Context,
     titleStat: TextFieldValue,
     mainTextState: TextFieldValue,
-    updatedSelectedImageUris: String?,
     songNameState: TextFieldValue,
+
 ) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
     var updatedSelectedImageUris by remember { mutableStateOf(selectedImageUris) }
+
+    val db = remember {
+        DiaryDatabase.getDatabase(context)
+    }
+    val scope = rememberCoroutineScope()
 
     if (isScreenClosed.value) {
         // isScreenClosed 값이 true일 경우 화면을 닫고 HomeActivity로 이동
@@ -267,6 +273,9 @@ fun EditDiaryScreen(
         modifier = Modifier
             .fillMaxSize()
     ) {
+
+        val usersList by db.diaryDao().getAll().collectAsState(initial = emptyList())
+
         // 일기 제목 텍스트 필드
         TextField(
             value = titleState,
