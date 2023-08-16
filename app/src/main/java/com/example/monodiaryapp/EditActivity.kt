@@ -40,17 +40,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
+import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class EditActivity : ComponentActivity() {
-    private val mediaLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        uri?.let { selectedUri ->
-            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            applicationContext.contentResolver.takePersistableUriPermission(selectedUri, flag)
+    private val mediaLauncher =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+            uri?.let { selectedUri ->
+                val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                applicationContext.contentResolver.takePersistableUriPermission(selectedUri, flag)
+            }
         }
-    }
 
     private lateinit var diaryDao: DiaryDao // Declare DiaryDao
 
@@ -63,7 +65,27 @@ class EditActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val isScreenClosed = remember { mutableStateOf(false) }
-                    HomeScreen2(mediaLauncher, isScreenClosed, this)
+
+                    val database = DiaryDatabase.getDatabase(this) // Initialize database
+                    val diaryDao = database.diaryDao() // Initialize DiaryDao
+
+                    val titleState = remember { mutableStateOf(TextFieldValue()) }
+                    val mainTextState = remember { mutableStateOf(TextFieldValue()) }
+                    val updatedSelectedImageUris = remember { mutableStateOf(emptyList<Uri>()) }
+                    val songNameState = remember { mutableStateOf(TextFieldValue()) }
+                    val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
+
+                    HomeScreen2(
+                        mediaLauncher = mediaLauncher,
+                        isScreenClosed = isScreenClosed,
+                        context = applicationContext,
+                        titleState = titleState.value,
+                        mainTextState = mainTextState.value,
+                        updatedSelectedImageUris = updatedSelectedImageUris.value,
+                        songNameState = songNameState.value,
+                        lastModifiedState = lastModifiedState,
+                        diaryDao = diaryDao,
+                    )
                 }
             }
             val database = DiaryDatabase.getDatabase(this)
@@ -77,13 +99,15 @@ class EditActivity : ComponentActivity() {
 fun HomeScreen2(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     isScreenClosed: MutableState<Boolean>,
-    context: Context
+    context: Context,
+    titleState: TextFieldValue,
+    mainTextState: TextFieldValue,
+    updatedSelectedImageUris: List<Uri>,
+    songNameState: TextFieldValue,
+    lastModifiedState: MutableState<LocalDate>,
+    diaryDao: DiaryDao,
 ) {
-    // 마지막 수정 상태 기억
-    val lastModifiedState: MutableState<LocalDate> = remember { mutableStateOf((LocalDate.now())) }
-    // 이미지 Uri 상태
     val selectedImageUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
-    // mainTextState 변수 선언
     val mainTextState by remember { mutableStateOf(TextFieldValue()) }
 
     Scaffold(
@@ -93,12 +117,22 @@ fun HomeScreen2(
                 // 뒤로 가기 (내용저장, 리스트랑 연결)
                 navigationIcon = {
                     IconButton(onClick = {
+                        val newDiary = DiaryEntry(
+                            title = titleState.text,
+                            content = mainTextState.text,
+                            image = updatedSelectedImageUris.firstOrNull()
+                                ?.toString(), // Get the first image's path
+                            songTitle = songNameState.text,
+                            date = lastModifiedState.value.toString()
+                        )
+                        diaryDao.insert(newDiary)
+
                         val intent = Intent(context, HomeActivity::class.java)
                         context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Localized description"
+                            contentDescription = "저장 버튼"
                         )
                     }
                 },
@@ -142,7 +176,8 @@ fun HomeScreen2(
                             // mainTextState의 내용을 복사
                             val copiedText = mainTextState.text
                             // 복사된 내용을 ClipboardManager를 사용하여 클립보드에 복사
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clipboard =
+                                context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Text", copiedText)
                             clipboard.setPrimaryClip(clip)
                         }) {
@@ -186,7 +221,17 @@ fun HomeScreen2(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                EditDiaryScreen(lastModifiedState.value, selectedImageUris.value, mediaLauncher, isScreenClosed, context, mainTextState)
+                EditDiaryScreen(
+                    lastModified = lastModifiedState.value,
+                    selectedImageUris = selectedImageUris.value,
+                    launcher = mediaLauncher,
+                    isScreenClosed = isScreenClosed,
+                    context = context,
+                    titleStat = titleState,
+                    mainTextState = mainTextState,
+                    updatedSelectedImageUris = updatedSelectedImageUris.firstOrNull()?.toString(), // Pass the selectedImageUris state
+                    songNameState = songNameState,
+                )
             }
         }
     )
@@ -201,12 +246,14 @@ fun EditDiaryScreen(
     launcher: ActivityResultLauncher<PickVisualMediaRequest>,
     isScreenClosed: MutableState<Boolean>,
     context: Context,
-    mainTextState: TextFieldValue
+    titleStat: TextFieldValue,
+    mainTextState: TextFieldValue,
+    updatedSelectedImageUris: String?,
+    songNameState: TextFieldValue,
 ) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
-
     var updatedSelectedImageUris by remember { mutableStateOf(selectedImageUris) }
 
     if (isScreenClosed.value) {
@@ -300,7 +347,7 @@ fun MyBottomAppBar(
     BottomAppBar(
         contentPadding = PaddingValues(horizontal = 10.dp),
         modifier = Modifier.background(MaterialTheme.colorScheme.primary)
-        ) {
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -395,6 +442,27 @@ fun HomeScreen2Preview() {
     val isScreenClosedState = remember { mutableStateOf(false) } // remember를 사용하여 상태 정의
 
     MonoDiaryAppTheme {
-        HomeScreen2(mediaLauncher, isScreenClosedState, LocalContext.current)
+        val isScreenClosed = remember { mutableStateOf(false) }
+
+        val database = DiaryDatabase.getDatabase(LocalContext.current) // Initialize database
+        val diaryDao = database.diaryDao() // Initialize DiaryDao
+
+        val titleState = remember { mutableStateOf(TextFieldValue()) }
+        val mainTextState = remember { mutableStateOf(TextFieldValue()) }
+        val updatedSelectedImageUris = remember { mutableStateOf(emptyList<Uri>()) }
+        val songNameState = remember { mutableStateOf(TextFieldValue()) }
+        val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
+
+        HomeScreen2(
+            mediaLauncher = mediaLauncher,
+            isScreenClosed = isScreenClosed,
+            context = LocalContext.current,
+            titleState = titleState.value,
+            mainTextState = mainTextState.value,
+            updatedSelectedImageUris = updatedSelectedImageUris.value,
+            songNameState = songNameState.value,
+            lastModifiedState = lastModifiedState,
+            diaryDao = diaryDao,
+        )
     }
 }

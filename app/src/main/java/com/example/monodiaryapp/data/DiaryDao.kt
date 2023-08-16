@@ -20,6 +20,9 @@ interface DiaryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: DiaryEntry)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(diaryEntry: DiaryEntry)
+
     @Delete
     suspend fun deleteEntry(entry: DiaryEntry)
 

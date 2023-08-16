@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
 
-
 class HomeActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao // Declare DiaryDao
 
