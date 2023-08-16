@@ -30,19 +30,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             MonoDiaryAppTheme {
                 LaunchedEffect(true) {
-                    val diaryDatabase = DiaryDatabase.getDatabase(this@MainActivity)
-                    val diaryDao = diaryDatabase.diaryDao()
+//                    val diaryDatabase = DiaryDatabase.getDatabase(this@MainActivity)
+//                    val diaryDao = diaryDatabase.diaryDao()
 
-                    lifecycleScope.launch {
-                        val allEntries = diaryDao.getAllEntries().collect { entries ->
-                            // entries를 처리하거나 UI에 업데이트할 수 있음
-                        }
+//                    lifecycleScope.launch {
+//                        val allEntries = diaryDao.getAllEntries().collect { entries ->
+//                            // entries를 처리하거나 UI에 업데이트할 수 있음
+//                        }
 
                         delay(5000)
                         val intent = Intent(this@MainActivity, HomeActivity::class.java)
                         startActivity(intent)
                         finish()
-                    }
                 }
                 ShowInitialScreen()
             }
