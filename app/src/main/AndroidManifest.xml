@@ -18,8 +18,7 @@
             android:label="@string/title_activity_edit"
             android:theme="@style/Theme.MonoDiaryApp" />
         <activity
-            android:name=".EditDiaryActivity"
-            android:windowSoftInputMode="adjustResize"
+            android:name=".DiaryDetailActivity"
             android:exported="false" />
         <activity
             android:name=".HomeActivity"

@@ -30,10 +30,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             MonoDiaryAppTheme {
                 LaunchedEffect(true) {
-                        delay(5000)
-                        val intent = Intent(this@MainActivity, HomeActivity::class.java)
-                        startActivity(intent)
-                        finish()
+                    delay(5000)
+                    val intent = Intent(this@MainActivity, HomeActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                    finish()
                 }
                 ShowInitialScreen()
             }
@@ -49,6 +50,7 @@ fun ShowInitialScreen() {
             .fillMaxSize()
             .background(Color.White)
             .wrapContentSize(Alignment.Center)
+
     ) {
         Image(
             painter = painterResource(id = R.drawable.hhh),
