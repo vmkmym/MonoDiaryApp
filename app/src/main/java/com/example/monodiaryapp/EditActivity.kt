@@ -1,3 +1,5 @@
+@file:Suppress("NAME_SHADOWING")
+
 package com.example.monodiaryapp
 
 import android.content.ClipData
@@ -17,10 +19,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Share
@@ -71,7 +73,7 @@ class EditActivity : ComponentActivity() {
 
                     val titleState = remember { mutableStateOf(TextFieldValue()) }
                     val mainTextState = remember { mutableStateOf(TextFieldValue()) }
-                    val updatedSelectedImageUris = remember { mutableStateOf(emptyList<Uri>()) }
+                    val updatedSelectedImageUris= remember { mutableStateOf(mutableListOf<Uri>()) }
                     val songNameState = remember { mutableStateOf(TextFieldValue()) }
                     val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
 
@@ -81,7 +83,7 @@ class EditActivity : ComponentActivity() {
                         context = applicationContext,
                         titleState = titleState.value,
                         mainTextState = mainTextState.value,
-                        updatedSelectedImageUris = updatedSelectedImageUris.value,
+                        updatedSelectedImageUris = updatedSelectedImageUris,
                         songNameState = songNameState.value,
                         lastModifiedState = lastModifiedState,
                         diaryDao = diaryDao,
@@ -102,27 +104,24 @@ fun HomeScreen2(
     context: Context,
     titleState: TextFieldValue,
     mainTextState: TextFieldValue,
-    updatedSelectedImageUris: List<Uri>,
+    updatedSelectedImageUris: MutableState<MutableList<Uri>>,
     songNameState: TextFieldValue,
     lastModifiedState: MutableState<LocalDate>,
     diaryDao: DiaryDao,
 ) {
-    val selectedImageUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
-    val mainTextState by remember { mutableStateOf(TextFieldValue()) }
+    val selectedImageUris: MutableState<MutableList<Uri>> = remember { mutableStateOf(mutableListOf()) }
 
     Scaffold(
         topBar = {
             MyCenteredTopAppBar2(
                 title = "Today",
-                // 뒤로 가기 (내용저장, 리스트랑 연결)
+                // 뒤로 가기 버튼을 누르면 db에 새 다이어리가 저장되고 화면 전환
                 navigationIcon = {
                     IconButton(onClick = {
-
                         val newDiary = DiaryEntry(
                             title = titleState.text,
                             content = mainTextState.text,
-                            image = updatedSelectedImageUris.firstOrNull()
-                                ?.toString(), // Get the first image's path
+                            image = updatedSelectedImageUris.toString(), // Get the first image's path
                             songTitle = songNameState.text,
                             date = lastModifiedState.value.toString()
                         )
@@ -137,16 +136,21 @@ fun HomeScreen2(
                         )
                     }
                 },
-                // 사용자 프로필로 이동
+                // 수정 버튼을 누르면 해당 다이어리의 내용 업데이트
                 actionIcon = {
-                    IconButton(onClick = { /*
-                        val intent = Intent(context, UserActivity::class.java)
-                        context.startActivity(intent)
-                    사용자 프로필 액티비티로 이동 */
+                    IconButton(onClick = {
+                        val updatedDiary = DiaryEntry(
+                            title = titleState.text,
+                            content = mainTextState.text,
+                            image = updatedSelectedImageUris.toString(),
+                            songTitle = songNameState.text,
+                            date = lastModifiedState.value.toString()
+                        )
+                        diaryDao.update(updatedDiary)
                     }) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Localized description"
+                            contentDescription = "수정"
                         )
                     }
                 }
@@ -160,9 +164,11 @@ fun HomeScreen2(
                     .height(56.dp)
             ) {
                 MyBottomAppBar(
-                    // 내용 저장하지 않고 화면 닫기
+                    // 해당 다이어리 삭제 후 화면 전환
                     navigationIcon = {
                         IconButton(onClick = {
+                            val diaryToDelete = DiaryEntry() // 다이어리의 고유 ID
+                            diaryDao.delete(diaryToDelete)
                             isScreenClosed.value = true
                         }) {
                             Icon(
@@ -171,12 +177,9 @@ fun HomeScreen2(
                             )
                         }
                     },
-                    // 본문 내용 복사하기 (복사 완료 카드가 안 예쁨 -> 수정하기)
                     actionIcon1 = {
                         IconButton(onClick = {
-                            // mainTextState의 내용을 복사
                             val copiedText = mainTextState.text
-                            // 복사된 내용을 ClipboardManager를 사용하여 클립보드에 복사
                             val clipboard =
                                 context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Text", copiedText)
@@ -184,32 +187,17 @@ fun HomeScreen2(
                         }) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "내용복사"
+                                contentDescription = "복사"
                             )
                         }
                     },
-                    // 이 버튼을 누르면 변동 사항 저장된 후 갤러리로 이동
                     actionIcon2 = {
                         IconButton(onClick = {
-                            // 갤러리를 만들고 하기?
+                            // 나중에..
                         }) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowRight,
                                 contentDescription = "갤러리로 이동"
-                            )
-                        }
-                    },
-                    // 내용 수정 버튼을 눌러야 수정을 할 수 있음 (또 누를 필요는 없음)
-                    actionIcon3 = {
-                        IconButton(onClick = {
-                            lastModifiedState.value = LocalDate.now()
-                            // 이 버튼을 누르면 내용을 수정할 수 있음
-                            // 처음
-                        }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Create,
-                                contentDescription = "내용 수정"
                             )
                         }
                     }
@@ -230,7 +218,7 @@ fun HomeScreen2(
                     context = context,
                     titleStat = titleState,
                     mainTextState = mainTextState,
-                    updatedSelectedImageUris = updatedSelectedImageUris.firstOrNull()?.toString(), // Pass the selectedImageUris state
+                    updatedSelectedImageUris = updatedSelectedImageUris.value,
                     songNameState = songNameState,
                 )
             }
@@ -249,9 +237,10 @@ fun EditDiaryScreen(
     context: Context,
     titleStat: TextFieldValue,
     mainTextState: TextFieldValue,
+    updatedSelectedImageUris: MutableList<Uri>,
     songNameState: TextFieldValue,
 
-) {
+    ) {
     var titleState by remember { mutableStateOf(TextFieldValue()) }
     var mainTextState by remember { mutableStateOf(TextFieldValue()) }
     var songNameState by remember { mutableStateOf(TextFieldValue()) }
@@ -273,9 +262,13 @@ fun EditDiaryScreen(
         modifier = Modifier
             .fillMaxSize()
     ) {
+        val diaryList by db.diaryDao().getAll().collectAsState(initial = emptyList())
 
-        val usersList by db.diaryDao().getAll().collectAsState(initial = emptyList())
-
+        LazyColumn {
+            items(diaryList) {diaryEntry ->
+                DiaryItemEntry(entry = diaryEntry)
+            }
+        }
         // 일기 제목 텍스트 필드
         TextField(
             value = titleState,
@@ -351,7 +344,6 @@ fun MyBottomAppBar(
     navigationIcon: @Composable () -> Unit,
     actionIcon1: @Composable () -> Unit,
     actionIcon2: @Composable () -> Unit,
-    actionIcon3: @Composable () -> Unit,
 ) {
     BottomAppBar(
         contentPadding = PaddingValues(horizontal = 10.dp),
@@ -366,7 +358,6 @@ fun MyBottomAppBar(
             navigationIcon()
             actionIcon1()
             actionIcon2()
-            actionIcon3()
         }
     }
 }
@@ -412,7 +403,6 @@ fun ImageList(
 
     LazyColumn {
         item {
-            // 이미지 (기본값 이미지 또는 선택한)
             if (selectedImageUris.isNotEmpty()) {
                 selectedImageUris.forEachIndexed { index, uri ->
                     Image(
@@ -423,7 +413,6 @@ fun ImageList(
                     )
                 }
             } else {
-                // 기본 이미지 리소스 사용
                 val imagePainter = painterResource(id = R.drawable.hhh)
 
                 Image(
@@ -439,13 +428,39 @@ fun ImageList(
     }
 }
 
+@Composable
+fun DiaryItemEntry(entry: DiaryEntry) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = entry.title.toString(),
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            color = Color.Black
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = entry.content.toString(),
+            fontSize = 16.sp,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        // 추가적인 다이어리 항목 UI 요소 추가 가능
+    }
+}
+
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreen2Preview() {
     val mediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { result ->
-            // ...
+            // 뭘 넣어야 하지
         }
     )
     val isScreenClosedState = remember { mutableStateOf(false) } // remember를 사용하여 상태 정의
@@ -458,7 +473,7 @@ fun HomeScreen2Preview() {
 
         val titleState = remember { mutableStateOf(TextFieldValue()) }
         val mainTextState = remember { mutableStateOf(TextFieldValue()) }
-        val updatedSelectedImageUris = remember { mutableStateOf(emptyList<Uri>()) }
+        val updatedSelectedImageUris = remember { mutableStateOf(mutableListOf<Uri>()) }
         val songNameState = remember { mutableStateOf(TextFieldValue()) }
         val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
 
@@ -468,7 +483,7 @@ fun HomeScreen2Preview() {
             context = LocalContext.current,
             titleState = titleState.value,
             mainTextState = mainTextState.value,
-            updatedSelectedImageUris = updatedSelectedImageUris.value,
+            updatedSelectedImageUris = updatedSelectedImageUris,
             songNameState = songNameState.value,
             lastModifiedState = lastModifiedState,
             diaryDao = diaryDao,

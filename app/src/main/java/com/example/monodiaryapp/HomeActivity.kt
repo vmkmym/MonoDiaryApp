@@ -1,5 +1,6 @@
 package com.example.monodiaryapp
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -86,6 +87,7 @@ fun MyCenteredTopAppBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             MyCenteredTopAppBar(
@@ -99,7 +101,6 @@ fun HomeScreen() {
                     }
                 },
                 actionIcon = {
-                    val context = LocalContext.current
                     IconButton(
                         onClick = {
                             val intent = Intent(context, EditActivity::class.java)
@@ -119,32 +120,52 @@ fun HomeScreen() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                DiaryList()
+                DiaryList(context)
             }
         }
     )
 }
 
 @Composable
-fun DiaryList() {
+fun DiaryList(context: Context) {
     val diaryList = listOf(
-        Diary("일기 제목 7", "일기 본문 첫 줄...", "노래 제목 7", "아티스트 7", LocalDate.parse("2023-08-05")),
-        Diary("일기 제목 7", "일기 본문 첫 줄...", "노래 제목 7", "아티스트 7", LocalDate.parse("2023-08-04")),
+        Diary("8월 17일 목요일", "일기 본문 첫 줄...", "", "", LocalDate.parse("2023-08-05")),
+        Diary("8월 16일 수요일", "일기 본문 첫 줄...", "", "", LocalDate.parse("2023-08-04")),
         ).sortedByDescending { it.date }
 
     LazyColumn {
         items(diaryList) { diary ->
-            DiaryItem(diary)
+            DiaryItem(diary) { clickedDiary ->
+                // 일기 화면으로 이동하는 코드 추가
+                val intent = Intent(context, DiaryDetailActivity::class.java).apply {
+                    putExtra("title", clickedDiary.title)
+                    putExtra("content", clickedDiary.content)
+                    putExtra("songTitle", clickedDiary.songTitle)
+                    putExtra("artist", clickedDiary.artist)
+                    putExtra("date", clickedDiary.date.toString())
+                }
+                context.startActivity(intent)
+            }
         }
     }
 }
 
 @Composable
-fun DiaryItem(diary: Diary) {
+fun DiaryItem(diary: Diary, onItemClick: (Diary) -> Unit) {
+    val context: Context = LocalContext.current // 클릭 핸들러 밖에서 context 추출
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = { /* 일기 화면으로 이동하는 코드 추가 */ }),
+            .clickable(onClick = {
+                onItemClick(diary)
+                val intent = Intent(context, DiaryDetailActivity::class.java)
+                intent.putExtra("title", diary.title)
+                intent.putExtra("content", diary.content)
+                intent.putExtra("songTitle", diary.songTitle)
+                intent.putExtra("artist", diary.artist)
+                intent.putExtra("date", diary.date.toString())
+                context.startActivity(intent)
+            }),
         shape = MaterialTheme.shapes.large
     ) {
         Row(
@@ -153,10 +174,9 @@ fun DiaryItem(diary: Diary) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ImagePreview() // ImagePreview 함수로 이미지 코드 대체
+            ImagePreview()
 
             Spacer(modifier = Modifier.width(10.dp))
-
             Column(
                 verticalArrangement = Arrangement.Top
             ) {
@@ -167,7 +187,6 @@ fun DiaryItem(diary: Diary) {
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
-
                 Text(
                     text = diary.content.firstLineOrMaxLength(50),
                     fontWeight = FontWeight.Bold,
@@ -175,7 +194,6 @@ fun DiaryItem(diary: Diary) {
                 )
 
                 Spacer(modifier = Modifier.height(5.dp))
-
                 Text(
                     text = "${diary.songTitle} - ${diary.artist}",
                     fontWeight = FontWeight.Bold,
@@ -183,7 +201,6 @@ fun DiaryItem(diary: Diary) {
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
-
                 Text(
                     text = "작성일: ${formatDateWithDayOfWeek(diary.date)}",
                     fontWeight = FontWeight.Bold,
@@ -238,7 +255,3 @@ fun ImagePreview() {
         contentScale = ContentScale.Crop
     )
 }
-
-
-
-// 일기 드래그해서 삭제하기 (슬랙 링크 확인)
