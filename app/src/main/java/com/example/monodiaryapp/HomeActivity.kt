@@ -37,24 +37,26 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
+import com.example.monodiaryapp.data.DiaryEntry
 
 class HomeActivity : ComponentActivity() {
-    private lateinit var diaryDao: DiaryDao // Declare DiaryDao
+    private lateinit var diaryDao: DiaryDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val database = DiaryDatabase.getDatabase(this)
-        diaryDao = database.diaryDao()
-
         setContent {
             MonoDiaryAppTheme {
-                HomeScreen()
+                val database = remember { DiaryDatabase.getDatabase(this) }
+                diaryDao = database.diaryDao()
+                HomeScreen(database)
             }
         }
     }
@@ -86,7 +88,7 @@ fun MyCenteredTopAppBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(database: DiaryDatabase) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -120,23 +122,19 @@ fun HomeScreen() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                DiaryList(context)
+                DiaryList(context, database)
             }
         }
     )
 }
 
 @Composable
-fun DiaryList(context: Context) {
-    val diaryList = listOf(
-        Diary("8월 17일 목요일", "일기 본문 첫 줄...", "", "", LocalDate.parse("2023-08-05")),
-        Diary("8월 16일 수요일", "일기 본문 첫 줄...", "", "", LocalDate.parse("2023-08-04")),
-        ).sortedByDescending { it.date }
+fun DiaryList(context: Context, database: DiaryDatabase) {
+    val diaryList by database.diaryDao().getAll().collectAsState(initial = emptyList())
 
     LazyColumn {
-        items(diaryList) { diary ->
-            DiaryItem(diary) { clickedDiary ->
-                // 일기 화면으로 이동하는 코드 추가
+        items(diaryList) { diaryEntry ->
+            DiaryItem(diaryEntry) {clickedDiary ->
                 val intent = Intent(context, DiaryDetailActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
                     putExtra("content", clickedDiary.content)
@@ -151,22 +149,13 @@ fun DiaryList(context: Context) {
 }
 
 @Composable
-fun DiaryItem(diary: Diary, onItemClick: (Diary) -> Unit) {
-    val context: Context = LocalContext.current // 클릭 핸들러 밖에서 context 추출
+fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = {
-                onItemClick(diary)
-                val intent = Intent(context, DiaryDetailActivity::class.java)
-                intent.putExtra("title", diary.title)
-                intent.putExtra("content", diary.content)
-                intent.putExtra("songTitle", diary.songTitle)
-                intent.putExtra("artist", diary.artist)
-                intent.putExtra("date", diary.date.toString())
-                context.startActivity(intent)
-            }),
+            .clickable { onItemClick(diary) },
         shape = MaterialTheme.shapes.large
+
     ) {
         Row(
             modifier = Modifier
@@ -174,6 +163,7 @@ fun DiaryItem(diary: Diary, onItemClick: (Diary) -> Unit) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             ImagePreview()
 
             Spacer(modifier = Modifier.width(10.dp))
@@ -181,14 +171,14 @@ fun DiaryItem(diary: Diary, onItemClick: (Diary) -> Unit) {
                 verticalArrangement = Arrangement.Top
             ) {
                 Text(
-                    text = diary.title,
+                    text = diary.title.toString(),
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 20.sp)
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = diary.content.firstLineOrMaxLength(50),
+                    text = diary.content!!.firstLineOrMaxLength(50),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 16.sp)
                 )
@@ -202,26 +192,15 @@ fun DiaryItem(diary: Diary, onItemClick: (Diary) -> Unit) {
 
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = "작성일: ${formatDateWithDayOfWeek(diary.date)}",
+                    text = if (diary.date != null) {
+                        "작성일: ${formatDateWithDayOfWeek(LocalDate.parse(diary.date))}"
+                    } else {
+                        "작성일: -"
+                    },
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                 )
             }
-        }
-    }
-}
-
-// 일정 글자 수 이하의 본문만 표시하는 firstLineOrMaxLength()
-fun String.firstLineOrMaxLength(maxLength: Int): String {
-    val lines = this.lines()
-    return if (lines.isEmpty()) {
-        ""
-    } else {
-        val firstLine = lines[0]
-        if (firstLine.length > maxLength) {
-            firstLine.substring(0, maxLength) + "..." // 일정 글자수까지만 표시하고 ... 추가
-        } else {
-            firstLine
         }
     }
 }
@@ -235,7 +214,6 @@ data class Diary(
     val date: LocalDate
 )
 
-// 날짜 포맷
 fun formatDateWithDayOfWeek(date: LocalDate): String {
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))
@@ -254,4 +232,19 @@ fun ImagePreview() {
             .clip(CircleShape),
         contentScale = ContentScale.Crop
     )
+}
+
+// 일정 글자 수 이하의 본문만 표시하는 firstLineOrMaxLength()
+fun String.firstLineOrMaxLength(maxLength: Int): String {
+    val lines = this.lines()
+    return if (lines.isEmpty()) {
+        ""
+    } else {
+        val firstLine = lines[0]
+        if (firstLine.length > maxLength) {
+            firstLine.substring(0, maxLength) + "..." // 일정 글자수까지만 표시하고 ... 추가
+        } else {
+            firstLine
+        }
+    }
 }

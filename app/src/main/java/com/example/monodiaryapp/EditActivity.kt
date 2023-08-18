@@ -20,11 +20,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -37,7 +36,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,19 +59,11 @@ class EditActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val isScreenClosed = remember { mutableStateOf(false) }
                     val context = LocalContext.current
 
-                    val database = DiaryDatabase.getDatabase(this) // Initialize database
-                    val diaryDao = database.diaryDao() // Initialize DiaryDao
+                    val database = DiaryDatabase.getDatabase(this)
+                    val diaryDao = database.diaryDao()
 
-                    val titleState = remember { mutableStateOf(TextFieldValue()) }
-                    val mainTextState = remember { mutableStateOf(TextFieldValue()) }
-                    val updatedSelectedImageUris = remember { mutableStateOf(mutableListOf<Uri>()) }
-                    val songNameState = remember { mutableStateOf(TextFieldValue()) }
-                    val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
-
-//                    var selectUri by remember { mutableStateOf<Uri?>(null) }
                     var selectUris by remember { mutableStateOf<List<Uri?>>(emptyList()) }
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
@@ -86,23 +76,16 @@ class EditActivity : ComponentActivity() {
 
                         }
                     )
-
                     HomeScreen2(
                         mediaLauncher = mediaLauncher,
-                        isScreenClosed = isScreenClosed,
-                        context = applicationContext,
+                        context = context,
                         selectUris = selectUris,
-                        titleState = titleState.value,
-                        mainTextState = mainTextState.value,
-                        updatedSelectedImageUris = updatedSelectedImageUris,
-                        songNameState = songNameState.value,
-                        lastModifiedState = lastModifiedState,
                         diaryDao = diaryDao,
                     )
                 }
             }
             val database = DiaryDatabase.getDatabase(this)
-            diaryDao = database.diaryDao() // Initialize DiaryDao
+            diaryDao = database.diaryDao()
         }
     }
 }
@@ -111,19 +94,21 @@ class EditActivity : ComponentActivity() {
 @Composable
 fun HomeScreen2(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
-    isScreenClosed: MutableState<Boolean>,
     context: Context,
     selectUris: List<Uri?>,
-    titleState: TextFieldValue,
-    mainTextState: TextFieldValue,
-    updatedSelectedImageUris: MutableState<MutableList<Uri>>,
-    songNameState: TextFieldValue,
-    lastModifiedState: MutableState<LocalDate>,
     diaryDao: DiaryDao,
 ) {
-    val selectedImageUris: MutableState<MutableList<Uri>> =
-        remember { mutableStateOf(mutableListOf()) }
     val scope = rememberCoroutineScope()
+
+    var titleState by remember { mutableStateOf("") }
+    var mainTextState by remember { mutableStateOf("") }
+    var songNameState by remember { mutableStateOf("") }
+    val lastModifiedState = remember { mutableStateOf("") }
+
+    val isScreenClosed = remember { mutableStateOf(false) }
+    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val lastModified = LocalDate.now()
+    val formattedLastModified = lastModified.format(dateFormatter)
 
     Scaffold(
         topBar = {
@@ -133,19 +118,22 @@ fun HomeScreen2(
                 navigationIcon = {
                     IconButton(onClick = {
                         val newDiary = DiaryEntry(
-                            title = titleState.text,
-                            content = mainTextState.text,
-                            image = updatedSelectedImageUris.toString(), // Get the first image's path
-                            songTitle = songNameState.text,
-                            date = lastModifiedState.value.toString()
+                            title = titleState,
+                            content = mainTextState,
+                            image = selectUris,
+                            songTitle = songNameState,
+                            date = lastModifiedState.toString(),
                         )
-                        scope.launch(Dispatchers.IO) { diaryDao.insertAll(newDiary) }
+                        scope.launch(Dispatchers.IO) {
+                            diaryDao.insertAll(newDiary)
+                        }
+//                        finish()
 
                         val intent = Intent(context, HomeActivity::class.java)
                         context.startActivity(intent)
                     }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Default.Done,
                             contentDescription = "저장 버튼"
                         )
                     }
@@ -154,15 +142,16 @@ fun HomeScreen2(
                 actionIcon = {
                     IconButton(onClick = {
                         val updatedDiary = DiaryEntry(
-                            title = titleState.text,
-                            content = mainTextState.text,
-                            image = updatedSelectedImageUris.toString(),
-                            songTitle = songNameState.text,
-                            date = lastModifiedState.value.toString()
+                            title = titleState,
+                            content = mainTextState,
+                            image = selectUris,
+                            songTitle = songNameState,
+                            date = lastModifiedState.toString(),
                         )
-                        scope.launch(Dispatchers.IO) { diaryDao.update(updatedDiary) }
-                        val intent = Intent(context, MainActivity::class.java)
-                        context.startActivity(intent)
+                        scope.launch(Dispatchers.IO) {
+                            diaryDao.update(updatedDiary)
+                        }
+//                        finish()
                     }) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
@@ -195,7 +184,7 @@ fun HomeScreen2(
                     },
                     actionIcon1 = {
                         IconButton(onClick = {
-                            val copiedText = mainTextState.text
+                            val copiedText = mainTextState
                             val clipboard =
                                 context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Text", copiedText)
@@ -221,131 +210,85 @@ fun HomeScreen2(
             }
         },
         content = { innerPadding ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                EditDiaryScreen(
-                    lastModified = lastModifiedState.value,
-                    selectedImageUris = selectedImageUris.value,
-                    launcher = mediaLauncher,
-                    isScreenClosed = isScreenClosed,
-                    context = context,
-                    selectUris = selectUris,
-                    titleState = titleState,
-                    mainTextState = mainTextState,
-                    updatedSelectedImageUris = updatedSelectedImageUris.value,
-                    songNameState = songNameState,
-                )
+                LazyColumn {
+                    item {
+                        TextField(
+                            value = titleState,
+                            onValueChange = { titleState = it },
+                            label = { Text("일기 제목을 적어보세요!") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface),
+                            colors = TextFieldDefaults.textFieldColors(
+                                containerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            )
+                        )
+                    }
+                    // 이미지 필드
+                    item {
+                        MultiImageLoader(
+                            mediaLauncher = mediaLauncher,
+                            selectUris = selectUris,
+                            context = context
+                        )
+                    }
+                    // bgm필드
+                    item {
+                        TextField(
+                            value = songNameState,
+                            onValueChange = { songNameState = it },
+                            label = { Text("오늘의 bgm은?") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface),
+                            colors = TextFieldDefaults.textFieldColors(
+                                containerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            )
+                        )
+                    }
+                    // 일기 내용 필드
+                    item {
+                        TextField(
+                            value = mainTextState,
+                            onValueChange = { mainTextState = it },
+                            label = { Text("일기 내용을 적어보세요 :) ") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface),
+                            colors = TextFieldDefaults.textFieldColors(
+                                containerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            )
+                        )
+                    }
+
+                    item {
+                        Text(
+                            text = formattedLastModified.toString(),
+                            fontStyle = FontStyle.Italic,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(8.dp)
+                        )
+                    }
+                }
+
             }
         }
     )
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditDiaryScreen(
-    lastModified: LocalDate,
-    selectedImageUris: List<Uri>,
-    launcher: ActivityResultLauncher<PickVisualMediaRequest>,
-    isScreenClosed: MutableState<Boolean>,
-    context: Context,
-    selectUris: List<Uri?>,
-    titleState: TextFieldValue,
-    mainTextState: TextFieldValue,
-    updatedSelectedImageUris: MutableList<Uri>,
-    songNameState: TextFieldValue,
-
-    ) {
-    var titleState by remember { mutableStateOf(TextFieldValue()) }
-    var mainTextState by remember { mutableStateOf(TextFieldValue()) }
-    var songNameState by remember { mutableStateOf(TextFieldValue()) }
-    var updatedSelectedImageUris by remember { mutableStateOf(selectedImageUris) }
-
-    val db = remember {
-        DiaryDatabase.getDatabase(context)
-    }
-    val scope = rememberCoroutineScope()
-
-    if (isScreenClosed.value) {
-        // isScreenClosed 값이 true일 경우 화면을 닫고 HomeActivity로 이동
-        val intent = Intent(context, HomeActivity::class.java)
-        context.startActivity(intent)
-        return
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        val diaryList by db.diaryDao().getAll().collectAsState(initial = emptyList())
-
-        LazyColumn {
-            items(diaryList) { diaryEntry ->
-                DiaryItemEntry(entry = diaryEntry)
-            }
-        }
-        // 일기 제목 텍스트 필드
-        TextField(
-            value = titleState,
-            onValueChange = { titleState = it },
-            label = { Text("일기 제목을 적어보세요!") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            )
-        )
-        // bgm 텍스트 필드
-        TextField(
-            value = songNameState,
-            onValueChange = { songNameState = it },
-            label = { Text("오늘의 bgm은?") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            )
-        )
-        // 이미지 보이는 부분
-        MultiImageLoader(launcher = launcher, selectUris = selectUris, context = context)
-
-        TextField(
-            value = mainTextState,
-            onValueChange = { mainTextState = it },
-            label = { Text("일기 내용을 적어보세요 :) ") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            )
-        )
-
-        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        val formattedLastModified = lastModified.format(dateFormatter)
-
-        Text(
-            text = lastModified.toString(),
-            fontStyle = FontStyle.Italic,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(8.dp)
-        )
-    }
 }
 
 
@@ -398,47 +341,6 @@ fun MyCenteredTopAppBar2(
 
 
 @Composable
-fun ImageList(
-    selectedImageUris: List<Uri>,
-    onImageSelected: (Uri) -> Unit, // onImageSelected 함수 파라미터 추가
-    launcher: ActivityResultLauncher<PickVisualMediaRequest>
-) {
-    val imageModifier = Modifier
-        .clickable {
-            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-        }
-        .padding(10.dp)
-        .background(MaterialTheme.colorScheme.surface)
-        .fillMaxWidth()
-
-    LazyColumn {
-        item {
-            if (selectedImageUris.isNotEmpty()) {
-                selectedImageUris.forEachIndexed { index, uri ->
-                    Image(
-                        painter = painterResource(id = R.drawable.hhh),
-                        contentDescription = null,
-                        modifier = imageModifier.clickable { onImageSelected(uri) },
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            } else {
-                val imagePainter = painterResource(id = R.drawable.hhh)
-
-                Image(
-                    painter = imagePainter,
-                    contentDescription = null,
-                    modifier = imageModifier.clickable {
-                        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                    },
-                    contentScale = ContentScale.FillWidth
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun DiaryItemEntry(entry: DiaryEntry) {
     Column(
         modifier = Modifier
@@ -459,51 +361,44 @@ fun DiaryItemEntry(entry: DiaryEntry) {
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
         )
-        // 추가적인 다이어리 항목 UI 요소 추가 가능
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = entry.image.toString(),
+            fontSize = 16.sp,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = entry.songTitle.toString(),
+            fontSize = 16.sp,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = entry.artist.toString(),
+            fontSize = 16.sp,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = entry.date.toString(),
+            fontSize = 16.sp,
+            color = Color.Gray,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
-
-//@Preview(showBackground = true)
-//@Composable
-//fun HomeScreen2Preview() {
-//    var selectUri by remember { mutableStateOf<Uri?>(null) }
-//    val mediaLauncher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.PickVisualMedia(),
-//        onResult = { result ->
-//            selectUri = result
-//        }
-//    )
-//    MonoDiaryAppTheme {
-//        val isScreenClosed = remember { mutableStateOf(false) }
-//
-//        val database = DiaryDatabase.getDatabase(LocalContext.current) // Initialize database
-//        val diaryDao = database.diaryDao() // Initialize DiaryDao
-//
-//        val titleState = remember { mutableStateOf(TextFieldValue()) }
-//        val mainTextState = remember { mutableStateOf(TextFieldValue()) }
-//        val updatedSelectedImageUris = remember { mutableStateOf(mutableListOf<Uri>()) }
-//        val songNameState = remember { mutableStateOf(TextFieldValue()) }
-//        val lastModifiedState = remember { mutableStateOf(LocalDate.now()) }
-//
-//        HomeScreen2(
-//            mediaLauncher = mediaLauncher,
-//            isScreenClosed = isScreenClosed,
-//            context = LocalContext.current,
-//            selectUris = selectUri,
-//            titleState = titleState.value,
-//            mainTextState = mainTextState.value,
-//            updatedSelectedImageUris = updatedSelectedImageUris,
-//            songNameState = songNameState.value,
-//            lastModifiedState = lastModifiedState,
-//            diaryDao = diaryDao,
-//        )
-//    }
-//}
-
 @Composable
 private fun MultiImageLoader(
-    launcher: ActivityResultLauncher<PickVisualMediaRequest>,
+    mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     selectUris: List<Uri?>,
     context: Context
 ) {
@@ -525,7 +420,7 @@ private fun MultiImageLoader(
                 bitmap = bitmap.asImageBitmap(), contentDescription = "",
                 modifier = Modifier
                     .clickable {
-                        launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                 contentScale = ContentScale.Crop
             )
@@ -534,10 +429,10 @@ private fun MultiImageLoader(
     } else {
         Image(
             painter = painterResource(id = R.drawable.hhh),
-            contentDescription = "기본이미지",
+            contentDescription = "기본 이미지",
             modifier = Modifier
                 .clickable {
-                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
             contentScale = ContentScale.Crop
         )
