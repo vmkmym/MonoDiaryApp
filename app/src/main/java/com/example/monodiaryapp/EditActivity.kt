@@ -117,7 +117,12 @@ fun HomeScreen2(
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
-                        val intent = Intent(context, HomeActivity::class.java)
+                        val intent = Intent(context, DiaryDetailActivity::class.java)
+                        intent.putExtra("title", titleState)
+                        intent.putExtra("mainText", mainTextState)
+                        intent.putExtra("bgm", bgmState)
+                        intent.putExtra("selectUris", selectUris.toTypedArray())
+                        intent.putExtra("date", formattedLastModified)
                         context.startActivity(intent)
                     }) {
                         Icon(
@@ -341,30 +346,39 @@ private fun MultiImageLoader(
     context: Context
 ) {
     if (selectUris.isNotEmpty()) {
-
-        for (uri in selectUris) {
-
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ImageDecoder.decodeBitmap(
-                    ImageDecoder.createSource(
-                        context.contentResolver,
-                        uri!!
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            for (uri in selectUris) {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(
+                        ImageDecoder.createSource(
+                            context.contentResolver,
+                            uri!!
+                        )
                     )
-                )
-            } else {
-                MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
+                } else {
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.3f)
+                        .aspectRatio(1f)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
+                    )
+                }
             }
-            Image(
-                bitmap = bitmap.asImageBitmap(), contentDescription = "",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }
-            )
         }
-
     } else {
         Image(
             painter = painterResource(id = R.drawable.hhh),

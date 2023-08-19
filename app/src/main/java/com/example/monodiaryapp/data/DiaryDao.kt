@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 // 다이어리 엔터티의 조작을 위한 DAO 인터페이스를 생성
 @Dao
 interface DiaryDao {
-    @Query("SELECT * FROM diaryEntry ORDER BY date DESC")
+    @Query("SELECT * FROM diaryEntry ORDER BY date DESC, uid DESC")
     fun getAll(): Flow<List<DiaryEntry>>
 
     @Query("SELECT * FROM DiaryEntry WHERE uid = :entryId")

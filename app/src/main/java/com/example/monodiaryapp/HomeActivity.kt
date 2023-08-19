@@ -82,7 +82,6 @@ fun MyCenteredTopAppBar(
 @Composable
 fun HomeScreen(database: DiaryDatabase) {
     val context = LocalContext.current
-
     Scaffold(
         topBar = {
             MyCenteredTopAppBar(
@@ -152,7 +151,8 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
         Row(
             modifier = Modifier
                 .background(Color.White)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clickable { onItemClick(diary) },
             verticalAlignment = Alignment.CenterVertically
         ) {
 
