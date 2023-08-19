@@ -4,17 +4,17 @@ import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDate
+import androidx.room.TypeConverters
 
 //다이어리 데이터를 표현하는 엔터티 클래스를 정의
 @Entity
+@TypeConverters(UriListTypeConverter::class)
 data class DiaryEntry(
     @PrimaryKey(autoGenerate = true) val uid: Long = 0,
-    @ColumnInfo("title") var title: String? = null,
-    @ColumnInfo("content") var content: String? = null,
-    @ColumnInfo("image") var image: List<Uri?>? = null,
-    @ColumnInfo("songTitle") var songTitle: String? = null,
-    @ColumnInfo("artist") var artist: String? = null,
-    @ColumnInfo("date") var date: String? = null,
+    @ColumnInfo("title") var title: String,
+    @ColumnInfo("content") var content: String,
+    @ColumnInfo("image") var image: List<Uri>,
+    @ColumnInfo("bgm") var bgm: String,
+    @ColumnInfo("date") var date: String,
 )
 

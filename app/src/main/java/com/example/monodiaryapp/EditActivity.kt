@@ -22,10 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -49,8 +46,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class EditActivity : ComponentActivity() {
-    private lateinit var diaryDao: DiaryDao // Declare DiaryDao
-
+    private lateinit var diaryDao: DiaryDao
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -64,16 +60,15 @@ class EditActivity : ComponentActivity() {
                     val database = DiaryDatabase.getDatabase(this)
                     val diaryDao = database.diaryDao()
 
-                    var selectUris by remember { mutableStateOf<List<Uri?>>(emptyList()) }
+                    var selectUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
                         onResult = { uris ->
                             selectUris = uris
                             val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
                             for (uri in selectUris) {
-                                context.contentResolver.takePersistableUriPermission(uri!!, flag)
+                                context.contentResolver.takePersistableUriPermission(uri, flag)
                             }
-
                         }
                     )
                     HomeScreen2(
@@ -95,17 +90,13 @@ class EditActivity : ComponentActivity() {
 fun HomeScreen2(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     context: Context,
-    selectUris: List<Uri?>,
+    selectUris: List<Uri>,
     diaryDao: DiaryDao,
 ) {
     val scope = rememberCoroutineScope()
-
     var titleState by remember { mutableStateOf("") }
     var mainTextState by remember { mutableStateOf("") }
-    var songNameState by remember { mutableStateOf("") }
-    val lastModifiedState = remember { mutableStateOf("") }
-
-    val isScreenClosed = remember { mutableStateOf(false) }
+    var bgmState by remember { mutableStateOf("") }
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     val lastModified = LocalDate.now()
     val formattedLastModified = lastModified.format(dateFormatter)
@@ -114,21 +105,18 @@ fun HomeScreen2(
         topBar = {
             MyCenteredTopAppBar2(
                 title = "Today",
-                // 뒤로 가기 버튼을 누르면 db에 새 다이어리가 저장되고 화면 전환
                 navigationIcon = {
                     IconButton(onClick = {
                         val newDiary = DiaryEntry(
                             title = titleState,
                             content = mainTextState,
                             image = selectUris,
-                            songTitle = songNameState,
-                            date = lastModifiedState.toString(),
+                            bgm = bgmState,
+                            date = formattedLastModified,
                         )
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
-//                        finish()
-
                         val intent = Intent(context, HomeActivity::class.java)
                         context.startActivity(intent)
                     }) {
@@ -138,24 +126,24 @@ fun HomeScreen2(
                         )
                     }
                 },
-                // 수정 버튼을 누르면 해당 다이어리의 내용 업데이트
                 actionIcon = {
                     IconButton(onClick = {
                         val updatedDiary = DiaryEntry(
                             title = titleState,
                             content = mainTextState,
                             image = selectUris,
-                            songTitle = songNameState,
-                            date = lastModifiedState.toString(),
+                            bgm = bgmState,
+                            date = formattedLastModified,
                         )
                         scope.launch(Dispatchers.IO) {
                             diaryDao.update(updatedDiary)
                         }
-//                        finish()
+                        val intent = Intent(context, HomeActivity::class.java)
+                        context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "수정"
+                            contentDescription = "수정 버튼"
                         )
                     }
                 }
@@ -169,15 +157,22 @@ fun HomeScreen2(
                     .height(56.dp)
             ) {
                 MyBottomAppBar(
-                    // 해당 다이어리 삭제 후 화면 전환
                     navigationIcon = {
                         IconButton(onClick = {
-                            val diaryToDelete = DiaryEntry()
+                            val diaryToDelete = DiaryEntry(
+                                title = titleState,
+                                content = mainTextState,
+                                image = selectUris,
+                                bgm = bgmState,
+                                date = formattedLastModified
+                            )
                             scope.launch(Dispatchers.IO) { diaryDao.delete(diaryToDelete) }
-                            isScreenClosed.value = true
+                            val intent = Intent(context, HomeActivity::class.java)
+                            context.startActivity(intent)
                         }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                painter = painterResource(id = R.drawable.delete),
+                                modifier = Modifier.size(24.dp),
                                 contentDescription = "삭제"
                             )
                         }
@@ -191,17 +186,20 @@ fun HomeScreen2(
                             clipboard.setPrimaryClip(clip)
                         }) {
                             Icon(
-                                imageVector = Icons.Default.Share,
+                                painter = painterResource(id = R.drawable.copy),
+                                modifier = Modifier.size(24.dp),
                                 contentDescription = "복사"
                             )
                         }
                     },
                     actionIcon2 = {
                         IconButton(onClick = {
-                            // 나중에..
+                            val intent = Intent(context, GalleryActivity::class.java)
+                            context.startActivity(intent)
                         }) {
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowRight,
+                                painter = painterResource(id = R.drawable.photoicon),
+                                modifier = Modifier.size(24.dp),
                                 contentDescription = "갤러리로 이동"
                             )
                         }
@@ -221,7 +219,6 @@ fun HomeScreen2(
                             value = titleState,
                             onValueChange = { titleState = it },
                             label = { Text("일기 제목을 적어보세요!") },
-                            singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(MaterialTheme.colorScheme.surface),
@@ -243,8 +240,8 @@ fun HomeScreen2(
                     // bgm필드
                     item {
                         TextField(
-                            value = songNameState,
-                            onValueChange = { songNameState = it },
+                            value = bgmState,
+                            onValueChange = { bgmState = it },
                             label = { Text("오늘의 bgm은?") },
                             singleLine = true,
                             modifier = Modifier
@@ -273,7 +270,6 @@ fun HomeScreen2(
                             )
                         )
                     }
-
                     item {
                         Text(
                             text = formattedLastModified.toString(),
@@ -285,7 +281,6 @@ fun HomeScreen2(
                         )
                     }
                 }
-
             }
         }
     )
@@ -339,63 +334,6 @@ fun MyCenteredTopAppBar2(
     )
 }
 
-
-@Composable
-fun DiaryItemEntry(entry: DiaryEntry) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = entry.title.toString(),
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            color = Color.Black
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = entry.content.toString(),
-            fontSize = 16.sp,
-            color = Color.Gray,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = entry.image.toString(),
-            fontSize = 16.sp,
-            color = Color.Gray,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = entry.songTitle.toString(),
-            fontSize = 16.sp,
-            color = Color.Gray,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = entry.artist.toString(),
-            fontSize = 16.sp,
-            color = Color.Gray,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = entry.date.toString(),
-            fontSize = 16.sp,
-            color = Color.Gray,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
 @Composable
 private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
@@ -418,11 +356,12 @@ private fun MultiImageLoader(
             }
             Image(
                 bitmap = bitmap.asImageBitmap(), contentDescription = "",
+                contentScale = ContentScale.FillWidth,
                 modifier = Modifier
+                    .fillMaxWidth()
                     .clickable {
                         mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    },
-                contentScale = ContentScale.Crop
+                    }
             )
         }
 
@@ -430,11 +369,12 @@ private fun MultiImageLoader(
         Image(
             painter = painterResource(id = R.drawable.hhh),
             contentDescription = "기본 이미지",
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier
+                .fillMaxWidth()
                 .clickable {
                     mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                },
-            contentScale = ContentScale.Crop
+                }
         )
     }
 }

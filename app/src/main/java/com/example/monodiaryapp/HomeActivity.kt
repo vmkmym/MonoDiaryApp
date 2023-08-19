@@ -12,44 +12,36 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.monodiaryapp.data.DiaryDao
+import com.example.monodiaryapp.data.DiaryDatabase
+import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.sp
-import com.example.monodiaryapp.data.DiaryDao
-import com.example.monodiaryapp.data.DiaryDatabase
-import com.example.monodiaryapp.data.DiaryEntry
 
 class HomeActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -76,7 +68,7 @@ fun MyCenteredTopAppBar(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp) // 폰트 크기를 더 키움
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp)
             )
         },
         navigationIcon = navigationIcon,
@@ -90,6 +82,7 @@ fun MyCenteredTopAppBar(
 @Composable
 fun HomeScreen(database: DiaryDatabase) {
     val context = LocalContext.current
+
     Scaffold(
         topBar = {
             MyCenteredTopAppBar(
@@ -98,7 +91,7 @@ fun HomeScreen(database: DiaryDatabase) {
                     IconButton(onClick = { /* doSomething() */ }) {
                         Icon(
                             imageVector = Icons.Filled.Menu,
-                            contentDescription = "Localized description"
+                            contentDescription = "메뉴"
                         )
                     }
                 },
@@ -110,7 +103,7 @@ fun HomeScreen(database: DiaryDatabase) {
                         }) {
                         Icon(
                             imageVector = Icons.Filled.AddCircle,
-                            contentDescription = "Localized description"
+                            contentDescription = "다이어리 생성"
                         )
                     }
                 }
@@ -138,9 +131,8 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
                 val intent = Intent(context, DiaryDetailActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
                     putExtra("content", clickedDiary.content)
-                    putExtra("songTitle", clickedDiary.songTitle)
-                    putExtra("artist", clickedDiary.artist)
-                    putExtra("date", clickedDiary.date.toString())
+                    putExtra("bgm", clickedDiary.bgm)
+                    putExtra("date", clickedDiary.date)
                 }
                 context.startActivity(intent)
             }
@@ -171,33 +163,37 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
                 verticalArrangement = Arrangement.Top
             ) {
                 Text(
-                    text = diary.title.toString(),
+                    text = diary.title,
                     fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 20.sp)
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = diary.content!!.firstLineOrMaxLength(50),
+                    text = diary.content.firstLineOrMaxLength(50),
+                    maxLines = 1,
                     fontWeight = FontWeight.Bold,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 16.sp)
                 )
 
                 Spacer(modifier = Modifier.height(5.dp))
                 Text(
-                    text = "${diary.songTitle} - ${diary.artist}",
+                    text = diary.bgm,
+                    maxLines = 1,
                     fontWeight = FontWeight.Bold,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                 )
 
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text = if (diary.date != null) {
-                        "작성일: ${formatDateWithDayOfWeek(LocalDate.parse(diary.date))}"
-                    } else {
-                        "작성일: -"
-                    },
+                    text = "작성일: ${formatDateWithDayOfWeek(LocalDate.parse(diary.date))}",
+                    maxLines = 1,
                     fontWeight = FontWeight.Bold,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
                 )
             }
@@ -205,7 +201,7 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
     }
 }
 
-// 일기 목록 리스트에 표시 될 항목
+ // 일기 목록 리스트에 표시 될 항목
 data class Diary(
     val title: String,
     val content: String,
@@ -234,7 +230,7 @@ fun ImagePreview() {
     )
 }
 
-// 일정 글자 수 이하의 본문만 표시하는 firstLineOrMaxLength()
+// 일정 글자 수 이하의 본문만 표시 하는 firstLineOrMaxLength()
 fun String.firstLineOrMaxLength(maxLength: Int): String {
     val lines = this.lines()
     return if (lines.isEmpty()) {
@@ -242,7 +238,7 @@ fun String.firstLineOrMaxLength(maxLength: Int): String {
     } else {
         val firstLine = lines[0]
         if (firstLine.length > maxLength) {
-            firstLine.substring(0, maxLength) + "..." // 일정 글자수까지만 표시하고 ... 추가
+            firstLine.substring(0, maxLength) + "..."
         } else {
             firstLine
         }
