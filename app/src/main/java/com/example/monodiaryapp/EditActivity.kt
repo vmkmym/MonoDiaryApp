@@ -56,10 +56,8 @@ class EditActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val context = LocalContext.current
-
                     val database = DiaryDatabase.getDatabase(this)
                     val diaryDao = database.diaryDao()
-
                     var selectUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
@@ -94,12 +92,16 @@ fun HomeScreen2(
     diaryDao: DiaryDao,
 ) {
     val scope = rememberCoroutineScope()
+
     var titleState by remember { mutableStateOf("") }
     var mainTextState by remember { mutableStateOf("") }
     var bgmState by remember { mutableStateOf("") }
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
     val lastModified = LocalDate.now()
     val formattedLastModified = lastModified.format(dateFormatter)
+    val isModified = remember { mutableStateOf(false) }
+    var selectedDiary by remember { mutableStateOf<DiaryEntry?>(null) }
 
     Scaffold(
         topBar = {
@@ -117,7 +119,7 @@ fun HomeScreen2(
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
-                        val intent = Intent(context, DiaryDetailActivity::class.java)
+                        val intent = Intent(context, HomeActivity::class.java)
                         intent.putExtra("title", titleState)
                         intent.putExtra("mainText", mainTextState)
                         intent.putExtra("bgm", bgmState)
@@ -133,15 +135,8 @@ fun HomeScreen2(
                 },
                 actionIcon = {
                     IconButton(onClick = {
-                        val updatedDiary = DiaryEntry(
-                            title = titleState,
-                            content = mainTextState,
-                            image = selectUris,
-                            bgm = bgmState,
-                            date = formattedLastModified,
-                        )
-                        scope.launch(Dispatchers.IO) {
-                            diaryDao.update(updatedDiary)
+                        if (isModified.value) {
+                            // 수정 기능 어떻게 하지
                         }
                         val intent = Intent(context, HomeActivity::class.java)
                         context.startActivity(intent)
@@ -164,14 +159,11 @@ fun HomeScreen2(
                 MyBottomAppBar(
                     navigationIcon = {
                         IconButton(onClick = {
-                            val diaryToDelete = DiaryEntry(
-                                title = titleState,
-                                content = mainTextState,
-                                image = selectUris,
-                                bgm = bgmState,
-                                date = formattedLastModified
-                            )
-                            scope.launch(Dispatchers.IO) { diaryDao.delete(diaryToDelete) }
+                            selectedDiary?.let { diaryEntry ->
+                                scope.launch(Dispatchers.IO) {
+                                    diaryDao.delete(diaryEntry) // 선택한 다이어리 삭제
+                                }
+                            }
                             val intent = Intent(context, HomeActivity::class.java)
                             context.startActivity(intent)
                         }) {
@@ -263,7 +255,9 @@ fun HomeScreen2(
                     item {
                         TextField(
                             value = mainTextState,
-                            onValueChange = { mainTextState = it },
+                            onValueChange = {
+                                mainTextState = it
+                                isModified.value = it.isNotEmpty() },
                             label = { Text("일기 내용을 적어보세요 :) ") },
                             modifier = Modifier
                                 .fillMaxWidth()

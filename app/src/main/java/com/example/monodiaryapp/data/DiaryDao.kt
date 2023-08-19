@@ -17,6 +17,7 @@ interface DiaryDao {
     @Query("SELECT * FROM DiaryEntry WHERE uid = :entryId")
     fun loadAllByIds(entryId: Long): Flow<DiaryEntry?>
 
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: DiaryEntry)
 

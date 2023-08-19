@@ -46,7 +46,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class DiaryDetailActivity : ComponentActivity() {
-    private lateinit var diaryDao: DiaryDao
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -56,7 +55,7 @@ class DiaryDetailActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val context = LocalContext.current
-                    val database = DiaryDatabase.getDatabase(this)
+                    val database = remember { DiaryDatabase.getDatabase(context) }
                     val diaryDao = database.diaryDao()
                     var selectUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
                     val mediaLauncher = rememberLauncherForActivityResult(
@@ -87,8 +86,6 @@ class DiaryDetailActivity : ComponentActivity() {
                     )
                 }
             }
-//            val database = DiaryDatabase.getDatabase(this)
-//            diaryDao = database.diaryDao()
         }
     }
 }
@@ -113,6 +110,7 @@ fun ShowDiaryDetailScreen(
     val lastModified = LocalDate.now()
     val formattedLastModified = lastModified.format(dateFormatter)
     val dateState = formattedLastModified
+    val selectedDiary by remember { mutableStateOf<DiaryEntry?>(null) }
 
     Scaffold(
         topBar = {
@@ -120,43 +118,35 @@ fun ShowDiaryDetailScreen(
                 title = "Today",
                 navigationIcon = {
                     IconButton(onClick = {
-                        val newDiary = DiaryEntry(
-                            title = titleState,
-                            content = mainTextState,
-                            image = selectUris,
-                            bgm = bgmState,
-                            date = formattedLastModified,
-                        )
-                        scope.launch(Dispatchers.IO) {
-                            diaryDao.insertAll(newDiary)
+                        selectedDiary?.let { diaryEntry ->
+                            scope.launch(Dispatchers.IO) {
+                                diaryDao.update(diaryEntry) // 선택한 다이어리 삭제
+                            }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
+                        intent.putExtra("diaryUid", selectedDiary?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.Done,
-                            contentDescription = "저장 버튼"
+                            contentDescription = "저장"
                         )
                     }
                 },
                 actionIcon = {
                     IconButton(onClick = {
-                        val updatedDiary = DiaryEntry(
-                            title = titleState,
-                            content = mainTextState,
-                            image = selectUris,
-                            bgm = bgmState,
-                            date = formattedLastModified,
-                        )
-                        scope.launch(Dispatchers.IO) {
-                            diaryDao.update(updatedDiary)
+                        selectedDiary?.let { diaryEntry ->
+                            scope.launch(Dispatchers.IO) {
+                                diaryDao.update(diaryEntry)
+                            }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
+                        intent.putExtra("diaryUid", selectedDiary?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "수정 버튼"
+                            contentDescription = "수정"
                         )
                     }
                 }
@@ -172,14 +162,11 @@ fun ShowDiaryDetailScreen(
                 BottomAppBarContent(
                     navigationIcon = {
                         IconButton(onClick = {
-                            val diaryToDelete = DiaryEntry(
-                                title = titleState,
-                                content = mainTextState,
-                                image = selectUris,
-                                bgm = bgmState,
-                                date = formattedLastModified
-                            )
-                            scope.launch(Dispatchers.IO) { diaryDao.delete(diaryToDelete) }
+                            selectedDiary?.let { diaryEntry ->
+                                scope.launch(Dispatchers.IO) {
+                                    diaryDao.delete(diaryEntry)
+                                }
+                            }
                             val intent = Intent(context, HomeActivity::class.java)
                             context.startActivity(intent)
                         }) {
@@ -230,7 +217,8 @@ fun ShowDiaryDetailScreen(
                     item {
                         TextField(
                             value = titleState,
-                            onValueChange = { titleState = it },
+                            onValueChange = { newTitle ->
+                                titleState = newTitle },
                             label = { Text("일기 제목을 적어보세요!") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -254,7 +242,8 @@ fun ShowDiaryDetailScreen(
                     item {
                         TextField(
                             value = bgmState,
-                            onValueChange = { bgmState = it },
+                            onValueChange = { newbgm
+                                -> bgmState = newbgm },
                             label = { Text("오늘의 bgm은?") },
                             singleLine = true,
                             modifier = Modifier
@@ -271,7 +260,9 @@ fun ShowDiaryDetailScreen(
                     item {
                         TextField(
                             value = mainTextState,
-                            onValueChange = { mainTextState = it },
+                            onValueChange = { newMainText ->
+                                mainTextState = newMainText
+                            },
                             label = { Text("일기 내용을 적어보세요 :) ") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -285,7 +276,7 @@ fun ShowDiaryDetailScreen(
                     }
                     item {
                         Text(
-                            text = formattedLastModified.toString(),
+                            text = dateState,
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier
                                 .fillMaxWidth()
