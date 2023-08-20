@@ -1,5 +1,6 @@
 package com.example.monodiaryapp
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -21,8 +22,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -36,16 +37,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+
 class DiaryDetailActivity : ComponentActivity() {
+    private lateinit var diaryDao: DiaryDao
+    private lateinit var diaryDetailViewModel: DiaryDetailViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -57,60 +66,102 @@ class DiaryDetailActivity : ComponentActivity() {
                     val context = LocalContext.current
                     val database = remember { DiaryDatabase.getDatabase(context) }
                     val diaryDao = database.diaryDao()
-                    var selectUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-                    val mediaLauncher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-                        onResult = { uris ->
-                            selectUris = uris
-                            val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                            for (uri in selectUris) {
-                                context.contentResolver.takePersistableUriPermission(uri, flag)
-                            }
-                        }
-                    )
 
                     val title = intent.getStringExtra("title") ?: ""
                     val mainText = intent.getStringExtra("content") ?: ""
                     val bgm = intent.getStringExtra("bgm") ?: ""
-                    val date = intent.getStringExtra("date") ?: ""
 
+                    diaryDetailViewModel = ViewModelProvider(this)[DiaryDetailViewModel::class.java]
+                    diaryDetailViewModel.initialize(title, mainText, bgm)
+
+                    val mediaLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+                        onResult = { uris ->
+                            diaryDetailViewModel.updateImageUris(uris)
+                        }
+                    )
                     ShowDiaryDetailScreen(
                         mediaLauncher = mediaLauncher,
                         context = context,
-                        selectUris = selectUris,
                         diaryDao = diaryDao,
-                        titleState = title,
-                        mainTextState = mainText,
-                        bgmState = bgm,
-                        dateState = date
+                        diaryDetailViewModel = diaryDetailViewModel
                     )
                 }
             }
+            val database = DiaryDatabase.getDatabase(this)
+            diaryDao = database.diaryDao()
         }
     }
 }
 
+class DiaryDetailViewModel : ViewModel() {
+    private val _titleState = MutableStateFlow("")
+    val titleState: StateFlow<String> = _titleState
+
+    private val _mainTextState = MutableStateFlow("")
+    val mainTextState: StateFlow<String> = _mainTextState
+
+    private val _bgmState = MutableStateFlow("")
+    val bgmState: StateFlow<String> = _bgmState
+
+    private val _imageUris = MutableStateFlow<List<Uri>>(emptyList())
+    val imageUris: StateFlow<List<Uri>> = _imageUris
+
+    private val _date = MutableStateFlow(LocalDate.now())
+    val date: StateFlow<LocalDate> = _date
+
+    private val _selectedDiary = MutableStateFlow<DiaryEntry?>(null)
+    val selectedDiary: StateFlow<DiaryEntry?> = _selectedDiary
+
+    fun initialize(initialTitle: String, initialMainText: String, initialBgm: String) {
+        _titleState.value = initialTitle
+        _mainTextState.value = initialMainText
+        _bgmState.value = initialBgm
+    }
+    fun updateTitle(newTitle: String) {
+        _titleState.value = newTitle
+    }
+
+    fun updateMainText(newMainText: String) {
+        _mainTextState.value = newMainText
+    }
+
+    fun updateBgm(newBgm: String) {
+        _bgmState.value = newBgm
+    }
+
+    fun updateImageUris(newImageUris: List<Uri>) {
+        _imageUris.value = newImageUris
+    }
+
+    fun updateDate(newDate: LocalDate) {
+        _date.value = newDate
+    }
+
+    fun selectDiary(diaryEntry: DiaryEntry) {
+        _selectedDiary.value = diaryEntry
+    }
+
+    fun clearSelectedDiary() {
+        _selectedDiary.value = null
+    }
+}
+
+
+@SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShowDiaryDetailScreen(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     context: Context,
-    selectUris: List<Uri>,
     diaryDao: DiaryDao,
-    titleState: String,
-    mainTextState: String,
-    bgmState: String,
-    dateState: String,
+    diaryDetailViewModel: DiaryDetailViewModel
 ) {
     val scope = rememberCoroutineScope()
-    var titleState by remember { mutableStateOf("") }
-    var mainTextState by remember { mutableStateOf("") }
-    var bgmState by remember { mutableStateOf("") }
+
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     val lastModified = LocalDate.now()
     val formattedLastModified = lastModified.format(dateFormatter)
-    val dateState = formattedLastModified
-    val selectedDiary by remember { mutableStateOf<DiaryEntry?>(null) }
 
     Scaffold(
         topBar = {
@@ -118,13 +169,13 @@ fun ShowDiaryDetailScreen(
                 title = "Today",
                 navigationIcon = {
                     IconButton(onClick = {
-                        selectedDiary?.let { diaryEntry ->
+                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
                             scope.launch(Dispatchers.IO) {
-                                diaryDao.update(diaryEntry) // 선택한 다이어리 삭제
+                                diaryDao.update(selectedDiary)
                             }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
-                        intent.putExtra("diaryUid", selectedDiary?.uid)
+                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
@@ -135,17 +186,17 @@ fun ShowDiaryDetailScreen(
                 },
                 actionIcon = {
                     IconButton(onClick = {
-                        selectedDiary?.let { diaryEntry ->
+                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
                             scope.launch(Dispatchers.IO) {
-                                diaryDao.update(diaryEntry)
+                                diaryDao.update(selectedDiary)
                             }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
-                        intent.putExtra("diaryUid", selectedDiary?.uid)
+                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
-                            imageVector = Icons.Default.AccountCircle,
+                            imageVector = Icons.Default.Edit,
                             contentDescription = "수정"
                         )
                     }
@@ -162,11 +213,12 @@ fun ShowDiaryDetailScreen(
                 BottomAppBarContent(
                     navigationIcon = {
                         IconButton(onClick = {
-                            selectedDiary?.let { diaryEntry ->
+                            diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
                                 scope.launch(Dispatchers.IO) {
-                                    diaryDao.delete(diaryEntry)
+                                    diaryDao.delete(selectedDiary)
                                 }
                             }
+                            diaryDetailViewModel.clearSelectedDiary()
                             val intent = Intent(context, HomeActivity::class.java)
                             context.startActivity(intent)
                         }) {
@@ -179,7 +231,7 @@ fun ShowDiaryDetailScreen(
                     },
                     actionIcon1 = {
                         IconButton(onClick = {
-                            val copiedText = mainTextState
+                            val copiedText = diaryDetailViewModel.mainTextState.value
                             val clipboard =
                                 context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Text", copiedText)
@@ -216,9 +268,8 @@ fun ShowDiaryDetailScreen(
                 LazyColumn {
                     item {
                         TextField(
-                            value = titleState,
-                            onValueChange = { newTitle ->
-                                titleState = newTitle },
+                            value = diaryDetailViewModel.titleState.value,
+                            onValueChange = { diaryDetailViewModel.updateTitle(it) },
                             label = { Text("일기 제목을 적어보세요!") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -234,16 +285,19 @@ fun ShowDiaryDetailScreen(
                     item {
                         MultiImageLoader(
                             mediaLauncher = mediaLauncher,
-                            selectUris = selectUris,
-                            context = context
+                            selectUris = diaryDetailViewModel.imageUris.value,
+                            context = context,
+                            onImagesUpdated = { newImageUris ->
+                                diaryDetailViewModel.updateImageUris(newImageUris)
+                            }
                         )
                     }
+
                     // bgm필드
                     item {
                         TextField(
-                            value = bgmState,
-                            onValueChange = { newbgm
-                                -> bgmState = newbgm },
+                            value = diaryDetailViewModel.bgmState.value,
+                            onValueChange = { diaryDetailViewModel.updateBgm(it) },
                             label = { Text("오늘의 bgm은?") },
                             singleLine = true,
                             modifier = Modifier
@@ -259,9 +313,8 @@ fun ShowDiaryDetailScreen(
                     // 일기 내용 필드
                     item {
                         TextField(
-                            value = mainTextState,
-                            onValueChange = { newMainText ->
-                                mainTextState = newMainText
+                            value = diaryDetailViewModel.mainTextState.value,
+                            onValueChange = { diaryDetailViewModel.updateMainText(it)
                             },
                             label = { Text("일기 내용을 적어보세요 :) ") },
                             modifier = Modifier
@@ -276,7 +329,7 @@ fun ShowDiaryDetailScreen(
                     }
                     item {
                         Text(
-                            text = dateState,
+                            text = diaryDetailViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -342,33 +395,43 @@ fun TopAppBarWithIcons(
 private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     selectUris: List<Uri?>,
-    context: Context
+    context: Context,
+    onImagesUpdated: (List<Uri>) -> Unit
 ) {
     if (selectUris.isNotEmpty()) {
-
-        for (uri in selectUris) {
-
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ImageDecoder.decodeBitmap(
-                    ImageDecoder.createSource(
-                        context.contentResolver,
-                        uri!!
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            for (uri in selectUris) {
+                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    ImageDecoder.decodeBitmap(
+                        ImageDecoder.createSource(
+                            context.contentResolver,
+                            uri!!
+                        )
                     )
-                )
-            } else {
-                MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
+                } else {
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.3f)
+                        .aspectRatio(1f)
+                ) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            }
+                    )
+                }
             }
-            Image(
-                bitmap = bitmap.asImageBitmap(), contentDescription = "",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    }
-            )
         }
-
     } else {
         Image(
             painter = painterResource(id = R.drawable.hhh),
@@ -382,3 +445,4 @@ private fun MultiImageLoader(
         )
     }
 }
+

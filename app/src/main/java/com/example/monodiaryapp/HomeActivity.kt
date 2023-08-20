@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+
 class HomeActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,11 +127,11 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
 
     LazyColumn {
         items(diaryList) { diaryEntry ->
-            DiaryItem(diaryEntry) {clickedDiary ->
+            DiaryItem(diaryEntry) { clickedDiary ->
                 val intent = Intent(context, DiaryDetailActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
-                    putExtra("content", clickedDiary.content)
                     putExtra("bgm", clickedDiary.bgm)
+                    putExtra("content", clickedDiary.content)
                     putExtra("date", clickedDiary.date)
                 }
                 context.startActivity(intent)
@@ -201,26 +202,16 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
     }
 }
 
- // 일기 목록 리스트에 표시 될 항목
-data class Diary(
-    val title: String,
-    val content: String,
-    val songTitle: String,
-    val artist: String,
-    val date: LocalDate
-)
-
 fun formatDateWithDayOfWeek(date: LocalDate): String {
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))
     return "$formattedDate $dayOfWeek"
 }
 
-// 이미지 동기화 하기 위한 함수
 @Composable
 fun ImagePreview() {
     Image(
-        painter = painterResource(id = R.drawable.hhh), // 공통 이미지 리소스 사용
+        painter = painterResource(id = R.drawable.hhh),
         contentDescription = null,
         modifier = Modifier
             .padding(16.dp)
