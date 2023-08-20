@@ -123,10 +123,11 @@ fun HomeScreen(database: DiaryDatabase) {
 
 @Composable
 fun DiaryList(context: Context, database: DiaryDatabase) {
-    val diaryList by database.diaryDao().getAll().collectAsState(initial = emptyList())
+    val diaryListFlow = database.diaryDao().getAll()
+    val diaryListState by diaryListFlow.collectAsState(initial = emptyList())
 
     LazyColumn {
-        items(diaryList) { diaryEntry ->
+        items(diaryListState) { diaryEntry ->
             DiaryItem(diaryEntry) { clickedDiary ->
                 val intent = Intent(context, DiaryDetailActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
@@ -200,6 +201,16 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
             }
         }
     }
+}
+
+private fun navigateToDiaryDetailScreen(context: Context, diaryEntry: DiaryEntry) {
+    val intent = Intent(context, DiaryDetailActivity::class.java).apply {
+        putExtra("title", diaryEntry.title)
+        putExtra("bgm", diaryEntry.bgm)
+        putExtra("content", diaryEntry.content)
+        putExtra("date", diaryEntry.date)
+    }
+    context.startActivity(intent)
 }
 
 fun formatDateWithDayOfWeek(date: LocalDate): String {

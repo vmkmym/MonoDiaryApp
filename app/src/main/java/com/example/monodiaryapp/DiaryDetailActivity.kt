@@ -77,6 +77,11 @@ class DiaryDetailActivity : ComponentActivity() {
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
                         onResult = { uris ->
+                            for (uri in uris) {
+                                // 해당 Uri에 영구적인 권한을 부여합니다.
+                                val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                context.contentResolver.takePersistableUriPermission(uri, flag)
+                            }
                             diaryDetailViewModel.updateImageUris(uris)
                         }
                     )
@@ -94,7 +99,7 @@ class DiaryDetailActivity : ComponentActivity() {
     }
 }
 
-class DiaryDetailViewModel : ViewModel() {
+class DiaryDetailViewModel(private val context: Context) : ViewModel() {
     private val _titleState = MutableStateFlow("")
     val titleState: StateFlow<String> = _titleState
 
@@ -132,8 +137,12 @@ class DiaryDetailViewModel : ViewModel() {
 
     fun updateImageUris(newImageUris: List<Uri>) {
         _imageUris.value = newImageUris
+        // 이미지 Uri에 영구적인 권한 부여
+        val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        for (uri in newImageUris) {
+            context.contentResolver.takePersistableUriPermission(uri, flag)
+        }
     }
-
     fun updateDate(newDate: LocalDate) {
         _date.value = newDate
     }
@@ -158,10 +167,6 @@ fun ShowDiaryDetailScreen(
     diaryDetailViewModel: DiaryDetailViewModel
 ) {
     val scope = rememberCoroutineScope()
-
-    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val lastModified = LocalDate.now()
-    val formattedLastModified = lastModified.format(dateFormatter)
 
     Scaffold(
         topBar = {
@@ -218,7 +223,6 @@ fun ShowDiaryDetailScreen(
                                     diaryDao.delete(selectedDiary)
                                 }
                             }
-                            diaryDetailViewModel.clearSelectedDiary()
                             val intent = Intent(context, HomeActivity::class.java)
                             context.startActivity(intent)
                         }) {
@@ -398,30 +402,45 @@ private fun MultiImageLoader(
     context: Context,
     onImagesUpdated: (List<Uri>) -> Unit
 ) {
-    if (selectUris.isNotEmpty()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            for (uri in selectUris) {
-                val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        for (uri in selectUris) {
+            // 이미지 Uri에 영구적인 권한을 부여합니다.
+            uri?.let {
+                context.contentResolver.takePersistableUriPermission(uri, flag)
+            }
+
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                uri?.let {
                     ImageDecoder.decodeBitmap(
                         ImageDecoder.createSource(
                             context.contentResolver,
-                            uri!!
+                            uri
                         )
                     )
-                } else {
-                    MediaStore.Images.Media.getBitmap(context.contentResolver, uri!!)
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.3f)
-                        .aspectRatio(1f)
-                ) {
+            } else {
+                uri?.let {
+                    MediaStore.Images.Media.getBitmap(
+                        context.contentResolver,
+                        uri
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.3f)
+                    .aspectRatio(1f)
+            ) {
+                bitmap?.asImageBitmap()?.let {
                     Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "",
+                        bitmap = it,
+                        contentDescription = "선택한 이미지",
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -432,17 +451,13 @@ private fun MultiImageLoader(
                 }
             }
         }
-    } else {
-        Image(
-            painter = painterResource(id = R.drawable.hhh),
-            contentDescription = "기본 이미지",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }
-        )
+    }
+
+    // 이미지 업데이트 후 onImagesUpdated 호출
+    DisposableEffect(selectUris) {
+        val nonNullUris = selectUris.filterNotNull()
+        onImagesUpdated(nonNullUris)
+        onDispose { }
     }
 }
 
