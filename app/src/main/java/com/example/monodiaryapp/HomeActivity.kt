@@ -98,7 +98,7 @@ fun HomeScreen(database: DiaryDatabase) {
                 actionIcon = {
                     IconButton(
                         onClick = {
-                            val intent = Intent(context, EditActivity::class.java)
+                            val intent = Intent(context, AddDiaryActivity::class.java)
                             context.startActivity(intent)
                         }) {
                         Icon(
@@ -129,7 +129,7 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
     LazyColumn {
         items(diaryListState) { diaryEntry ->
             DiaryItem(diaryEntry) { clickedDiary ->
-                val intent = Intent(context, DiaryDetailActivity::class.java).apply {
+                val intent = Intent(context, EditDiaryActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
                     putExtra("bgm", clickedDiary.bgm)
                     putExtra("content", clickedDiary.content)
@@ -204,7 +204,7 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
 }
 
 private fun navigateToDiaryDetailScreen(context: Context, diaryEntry: DiaryEntry) {
-    val intent = Intent(context, DiaryDetailActivity::class.java).apply {
+    val intent = Intent(context, EditDiaryActivity::class.java).apply {
         putExtra("title", diaryEntry.title)
         putExtra("bgm", diaryEntry.bgm)
         putExtra("content", diaryEntry.content)

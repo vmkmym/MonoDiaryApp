@@ -51,9 +51,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 
-class EditActivity : ComponentActivity() {
+class EditDiaryActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
-    private lateinit var editViewModel: EditViewModel
+    private lateinit var diaryDetailViewModel: DiaryDetailViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,8 +64,15 @@ class EditActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val context = LocalContext.current
-                    val database = DiaryDatabase.getDatabase(this)
+                    val database = remember { DiaryDatabase.getDatabase(context) }
                     val diaryDao = database.diaryDao()
+
+                    val title = intent.getStringExtra("title") ?: ""
+                    val mainText = intent.getStringExtra("content") ?: ""
+                    val bgm = intent.getStringExtra("bgm") ?: ""
+
+                    diaryDetailViewModel = ViewModelProvider(this)[DiaryDetailViewModel::class.java]
+                    diaryDetailViewModel.initialize(title, mainText, bgm)
 
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
@@ -75,17 +82,14 @@ class EditActivity : ComponentActivity() {
                                 val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
                                 context.contentResolver.takePersistableUriPermission(uri, flag)
                             }
-                            editViewModel.updateImageUris(uris)
+                            diaryDetailViewModel.updateImageUris(uris)
                         }
                     )
-//                  ViewModel을 생성할 때 액티비티나 컴포넌트에서 context를 전달
-                    editViewModel = ViewModelProvider(this)[EditViewModel::class.java]
-//                  editViewModel = ViewModelProvider(this, EditViewModelFactory(this))[EditViewModel::class.java]
-                    EditScreen(
+                    ShowDiaryDetailScreen(
                         mediaLauncher = mediaLauncher,
                         context = context,
                         diaryDao = diaryDao,
-                        editViewModel = editViewModel
+                        diaryDetailViewModel = diaryDetailViewModel
                     )
                 }
             }
@@ -95,7 +99,7 @@ class EditActivity : ComponentActivity() {
     }
 }
 
-class EditViewModel (private val context: Context) : ViewModel() {
+class DiaryDetailViewModel: ViewModel() {
     private val _titleState = MutableStateFlow("")
     val titleState: StateFlow<String> = _titleState
 
@@ -114,6 +118,11 @@ class EditViewModel (private val context: Context) : ViewModel() {
     private val _selectedDiary = MutableStateFlow<DiaryEntry?>(null)
     val selectedDiary: StateFlow<DiaryEntry?> = _selectedDiary
 
+    fun initialize(initialTitle: String, initialMainText: String, initialBgm: String) {
+        _titleState.value = initialTitle
+        _mainTextState.value = initialMainText
+        _bgmState.value = initialBgm
+    }
     fun updateTitle(newTitle: String) {
         _titleState.value = newTitle
     }
@@ -128,85 +137,62 @@ class EditViewModel (private val context: Context) : ViewModel() {
 
     fun updateImageUris(newImageUris: List<Uri>) {
         _imageUris.value = newImageUris
-        // 이미지 Uri에 영구적인 권한 부여
-        val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        for (uri in newImageUris) {
-            context.contentResolver.takePersistableUriPermission(uri, flag)
-        }
+    }
+    fun updateDate(newDate: LocalDate) {
+        _date.value = newDate
+    }
 
-        fun updateDate(newDate: LocalDate) {
-            _date.value = newDate
-        }
+    fun selectDiary(diaryEntry: DiaryEntry) {
+        _selectedDiary.value = diaryEntry
+    }
 
-        fun selectDiary(diaryEntry: DiaryEntry) {
-            _selectedDiary.value = diaryEntry
-        }
-
-        fun clearSelectedDiary() {
-            _selectedDiary.value = null
-        }
+    fun clearSelectedDiary() {
+        _selectedDiary.value = null
     }
 }
+
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditScreen(
+fun ShowDiaryDetailScreen(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     context: Context,
     diaryDao: DiaryDao,
-    editViewModel: EditViewModel
+    diaryDetailViewModel: DiaryDetailViewModel
 ) {
     val scope = rememberCoroutineScope()
-    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
-    val lastModified = LocalDate.now()
-    val formattedLastModified = lastModified.format(dateFormatter)
-    val isModified = remember { mutableStateOf(false) }
-    var selectedDiary by remember { mutableStateOf<DiaryEntry?>(null) }
 
     Scaffold(
         topBar = {
-            MyCenteredTopAppBar2(
+            TopAppBarWithIcons(
                 title = "Today",
                 navigationIcon = {
                     IconButton(onClick = {
-                        val newDiary = DiaryEntry(
-                            title = editViewModel.titleState.value,
-                            content = editViewModel.mainTextState.value,
-                            image = editViewModel.imageUris.value,
-                            bgm = editViewModel.bgmState.value,
-                            date = editViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                        )
-                        scope.launch(Dispatchers.IO) {
-                            diaryDao.insertAll(newDiary)
+                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
+                            scope.launch(Dispatchers.IO) {
+                                diaryDao.update(selectedDiary)
+                            }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
-                        intent.putExtra("title", editViewModel.titleState.value)
-                        intent.putExtra(
-                            "selectUris",
-                            editViewModel.imageUris.value.toTypedArray()
-                        )
-                        intent.putExtra("bgm", editViewModel.bgmState.value)
-                        intent.putExtra("mainText", editViewModel.mainTextState.value)
-                        intent.putExtra("date", formattedLastModified)
+                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.Done,
-                            contentDescription = "저장 버튼"
+                            contentDescription = "저장"
                         )
                     }
                 },
-                // 로직
                 actionIcon = {
                     IconButton(onClick = {
-                        editViewModel.selectedDiary?.value?.let { selectedDiary ->
+                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
                             scope.launch(Dispatchers.IO) {
-                                diaryDao.update(selectedDiary) // 선택한 다이어리 수정
+                                diaryDao.update(selectedDiary)
                             }
                         }
                         val intent = Intent(context, HomeActivity::class.java)
+                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
                         context.startActivity(intent)
                     }) {
                         Icon(
@@ -215,7 +201,6 @@ fun EditScreen(
                         )
                     }
                 }
-
             )
         },
         bottomBar = {
@@ -225,12 +210,12 @@ fun EditScreen(
                     .fillMaxWidth()
                     .height(56.dp)
             ) {
-                MyBottomAppBar(
+                BottomAppBarContent(
                     navigationIcon = {
                         IconButton(onClick = {
-                            editViewModel.selectedDiary.value?.let { selectedDiary ->
+                            diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
                                 scope.launch(Dispatchers.IO) {
-                                    diaryDao.delete(selectedDiary) // 선택한 다이어리 삭제
+                                    diaryDao.delete(selectedDiary)
                                 }
                             }
                             val intent = Intent(context, HomeActivity::class.java)
@@ -245,7 +230,7 @@ fun EditScreen(
                     },
                     actionIcon1 = {
                         IconButton(onClick = {
-                            val copiedText = editViewModel.mainTextState.value
+                            val copiedText = diaryDetailViewModel.mainTextState.value
                             val clipboard =
                                 context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Copied Text", copiedText)
@@ -281,9 +266,10 @@ fun EditScreen(
             ) {
                 LazyColumn {
                     item {
+                        val text1 by diaryDetailViewModel.titleState.collectAsState()
                         TextField(
-                            value = editViewModel.titleState.value,
-                            onValueChange = { editViewModel.updateTitle(it) },
+                            value = text1,
+                            onValueChange = { diaryDetailViewModel.updateTitle(it) },
                             label = { Text("일기 제목을 적어보세요!") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -299,18 +285,20 @@ fun EditScreen(
                     item {
                         MultiImageLoader(
                             mediaLauncher = mediaLauncher,
-                            selectUris = editViewModel.imageUris.value,
+                            selectUris = diaryDetailViewModel.imageUris.value,
                             context = context,
                             onImagesUpdated = { newImageUris ->
-                                editViewModel.updateImageUris(newImageUris)
+                                diaryDetailViewModel.updateImageUris(newImageUris)
                             }
                         )
                     }
+
                     // bgm필드
                     item {
+                        val text2 by diaryDetailViewModel.titleState.collectAsState()
                         TextField(
-                            value = editViewModel.bgmState.value,
-                            onValueChange = { editViewModel.updateBgm(it) },
+                            value = text2,
+                            onValueChange = { diaryDetailViewModel.updateBgm(it) },
                             label = { Text("오늘의 bgm은?") },
                             singleLine = true,
                             modifier = Modifier
@@ -325,11 +313,10 @@ fun EditScreen(
                     }
                     // 일기 내용 필드
                     item {
+                        val text3 by diaryDetailViewModel.titleState.collectAsState()
                         TextField(
-                            value = editViewModel.mainTextState.value,
-                            onValueChange = {
-                                editViewModel.updateMainText(it)
-                                isModified.value = it.isNotEmpty()
+                            value = text3,
+                            onValueChange = { diaryDetailViewModel.updateMainText(it)
                             },
                             label = { Text("일기 내용을 적어보세요 :) ") },
                             modifier = Modifier
@@ -344,7 +331,7 @@ fun EditScreen(
                     }
                     item {
                         Text(
-                            text = editViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                            text = diaryDetailViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -360,7 +347,7 @@ fun EditScreen(
 
 
 @Composable
-fun MyBottomAppBar(
+fun BottomAppBarContent(
     navigationIcon: @Composable () -> Unit,
     actionIcon1: @Composable () -> Unit,
     actionIcon2: @Composable () -> Unit,
@@ -384,7 +371,7 @@ fun MyBottomAppBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyCenteredTopAppBar2(
+fun TopAppBarWithIcons(
     title: String,
     navigationIcon: @Composable () -> Unit,
     actionIcon: @Composable () -> Unit
@@ -406,7 +393,6 @@ fun MyCenteredTopAppBar2(
     )
 }
 
-
 @Composable
 private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
@@ -421,7 +407,6 @@ private fun MultiImageLoader(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         for (uri in selectUris) {
-            // 이미지 Uri에 영구적인 권한을 부여합니다.
             uri?.let {
                 context.contentResolver.takePersistableUriPermission(uri, flag)
             }
@@ -464,7 +449,18 @@ private fun MultiImageLoader(
             }
         }
     }
-
+    if (selectUris.isEmpty()) {
+        Image(
+            painter = painterResource(id = R.drawable.hhh),
+            contentDescription = "기본 이미지",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+        )
+    }
     // 이미지 업데이트 후 onImagesUpdated 호출
     DisposableEffect(selectUris) {
         val nonNullUris = selectUris.filterNotNull()
@@ -472,6 +468,4 @@ private fun MultiImageLoader(
         onDispose { }
     }
 }
-
-
 
