@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
@@ -82,7 +83,7 @@ class NewDiaryActivity : ComponentActivity() {
                     )
                     EditScreen(
                         mediaLauncher = mediaLauncher,
-                        context = context,
+                        context = context, // val 선언하고 빼기
                         diaryDao = diaryDao,
                         editViewModel = editViewModel
                     )
@@ -107,8 +108,8 @@ class EditViewModel : ViewModel() {
     private val _imageUris = MutableStateFlow<List<Uri>>(emptyList())
     val imageUris: StateFlow<List<Uri>> = _imageUris
 
-    private val _date = MutableStateFlow(LocalDate.now())
-    val date: StateFlow<LocalDate> = _date
+    private val _dateState = MutableStateFlow(LocalDate.now())
+    val dateState: StateFlow<LocalDate> = _dateState
 
     private val _selectedDiary = MutableStateFlow<DiaryEntry?>(null)
     val selectedDiary: StateFlow<DiaryEntry?> = _selectedDiary
@@ -127,18 +128,6 @@ class EditViewModel : ViewModel() {
 
     fun updateImageUris(newImageUris: List<Uri>) {
         _imageUris.value = newImageUris
-    }
-
-    fun updateDate(newDate: LocalDate) {
-        _date.value = newDate
-    }
-
-    fun selectDiary(diaryEntry: DiaryEntry) {
-        _selectedDiary.value = diaryEntry
-    }
-
-    fun clearSelectedDiary() {
-        _selectedDiary.value = null
     }
 }
 
@@ -170,17 +159,14 @@ fun EditScreen(
                             content = editViewModel.mainTextState.value,
                             image = editViewModel.imageUris.value,
                             bgm = editViewModel.bgmState.value,
-                            date = editViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                            date = editViewModel.dateState.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         )
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
                         val intent = Intent(context, HomeActivity::class.java)
                         intent.putExtra("title", editViewModel.titleState.value)
-                        intent.putExtra(
-                            "selectUris",
-                            editViewModel.imageUris.value.toTypedArray()
-                        )
+                        intent.putExtra("selectUris", editViewModel.imageUris.value.toTypedArray())
                         intent.putExtra("bgm", editViewModel.bgmState.value)
                         intent.putExtra("mainText", editViewModel.mainTextState.value)
                         intent.putExtra("date", formattedLastModified)
@@ -195,7 +181,7 @@ fun EditScreen(
                 // 로직
                 actionIcon = {
                     IconButton(onClick = {
-                        editViewModel.selectedDiary?.value?.let { selectedDiary ->
+                        editViewModel.selectedDiary.value?.let { selectedDiary ->
                             scope.launch(Dispatchers.IO) {
                                 diaryDao.update(selectedDiary) // 선택한 다이어리 수정
                             }
@@ -204,12 +190,11 @@ fun EditScreen(
                         context.startActivity(intent)
                     }) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            imageVector = Icons.Default.Done,
                             contentDescription = "수정"
                         )
                     }
                 }
-
             )
         },
         bottomBar = {
@@ -222,7 +207,7 @@ fun EditScreen(
                 MyBottomAppBar(
                     navigationIcon = {
                         IconButton(onClick = {
-                            editViewModel.selectedDiary?.value?.let { selectedDiary ->
+                            editViewModel.selectedDiary.value?.let { selectedDiary ->
                                 scope.launch(Dispatchers.IO) {
                                     diaryDao.delete(selectedDiary) // 선택한 다이어리 삭제
                                 }
@@ -341,7 +326,7 @@ fun EditScreen(
                     }
                     item {
                         Text(
-                            text = editViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                            text = editViewModel.dateState.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier
                                 .fillMaxWidth()

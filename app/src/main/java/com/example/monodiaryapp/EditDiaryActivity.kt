@@ -70,15 +70,16 @@ class EditDiaryActivity : ComponentActivity() {
                     val title = intent.getStringExtra("title") ?: ""
                     val mainText = intent.getStringExtra("content") ?: ""
                     val bgm = intent.getStringExtra("bgm") ?: ""
+                    val uid = intent.getLongExtra("uid", 0)
 
                     diaryDetailViewModel = ViewModelProvider(this)[DiaryDetailViewModel::class.java]
-                    diaryDetailViewModel.initialize(title, mainText, bgm)
+                    diaryDetailViewModel.initialize(title, mainText, bgm, uid)
 
                     val mediaLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.PickMultipleVisualMedia(),
                         onResult = { uris ->
                             for (uri in uris) {
-                                // 해당 Uri에 영구적인 권한을 부여합니다.
+                                // 해당 Uri에 영구적인 권한 부여
                                 val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
                                 context.contentResolver.takePersistableUriPermission(uri, flag)
                             }
@@ -99,7 +100,7 @@ class EditDiaryActivity : ComponentActivity() {
     }
 }
 
-class DiaryDetailViewModel: ViewModel() {
+class DiaryDetailViewModel : ViewModel() {
     private val _titleState = MutableStateFlow("")
     val titleState: StateFlow<String> = _titleState
 
@@ -109,20 +110,29 @@ class DiaryDetailViewModel: ViewModel() {
     private val _bgmState = MutableStateFlow("")
     val bgmState: StateFlow<String> = _bgmState
 
+    private val _uidState = MutableStateFlow(0L)
+    val uidState: StateFlow<Long> = _uidState
+
     private val _imageUris = MutableStateFlow<List<Uri>>(emptyList())
     val imageUris: StateFlow<List<Uri>> = _imageUris
 
     private val _date = MutableStateFlow(LocalDate.now())
     val date: StateFlow<LocalDate> = _date
 
+    // 읽기 쓰기 전용
     private val _selectedDiary = MutableStateFlow<DiaryEntry?>(null)
     val selectedDiary: StateFlow<DiaryEntry?> = _selectedDiary
 
-    fun initialize(initialTitle: String, initialMainText: String, initialBgm: String) {
+    fun initialize(
+        initialTitle: String, initialMainText: String, initialBgm: String, initialUid
+        : Long
+    ) {
         _titleState.value = initialTitle
         _mainTextState.value = initialMainText
         _bgmState.value = initialBgm
+        _uidState.value = initialUid
     }
+
     fun updateTitle(newTitle: String) {
         _titleState.value = newTitle
     }
@@ -138,17 +148,7 @@ class DiaryDetailViewModel: ViewModel() {
     fun updateImageUris(newImageUris: List<Uri>) {
         _imageUris.value = newImageUris
     }
-    fun updateDate(newDate: LocalDate) {
-        _date.value = newDate
-    }
 
-    fun selectDiary(diaryEntry: DiaryEntry) {
-        _selectedDiary.value = diaryEntry
-    }
-
-    fun clearSelectedDiary() {
-        _selectedDiary.value = null
-    }
 }
 
 
@@ -162,6 +162,7 @@ fun ShowDiaryDetailScreen(
     diaryDetailViewModel: DiaryDetailViewModel
 ) {
     val scope = rememberCoroutineScope()
+    var isEditing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -169,14 +170,22 @@ fun ShowDiaryDetailScreen(
                 title = "Today",
                 navigationIcon = {
                     IconButton(onClick = {
-                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
+                        // selectedDiary 는 DiaryEntry 객체를 가르킨다.
+                        if (isEditing) {
                             scope.launch(Dispatchers.IO) {
-                                diaryDao.update(selectedDiary)
+                                val diary =
+                                    diaryDao.loadAllByIds(diaryDetailViewModel.uidState.value)
+                                diary?.let { selectedDiary ->
+                                    selectedDiary.title = diaryDetailViewModel.titleState.value
+                                    selectedDiary.content = diaryDetailViewModel.mainTextState.value
+                                    selectedDiary.bgm = diaryDetailViewModel.bgmState.value
+                                    selectedDiary.image = diaryDetailViewModel.imageUris.value
+                                    diaryDao.update(selectedDiary)
+                                }
+                                val intent = Intent(context, HomeActivity::class.java)
+                                context.startActivity(intent)
                             }
                         }
-                        val intent = Intent(context, HomeActivity::class.java)
-                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
-                        context.startActivity(intent)
                     }) {
                         Icon(
                             imageVector = Icons.Default.Done,
@@ -186,14 +195,7 @@ fun ShowDiaryDetailScreen(
                 },
                 actionIcon = {
                     IconButton(onClick = {
-                        diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
-                            scope.launch(Dispatchers.IO) {
-                                diaryDao.update(selectedDiary)
-                            }
-                        }
-                        val intent = Intent(context, HomeActivity::class.java)
-                        intent.putExtra("diaryUid", diaryDetailViewModel.selectedDiary.value?.uid)
-                        context.startActivity(intent)
+                        isEditing = !isEditing
                     }) {
                         Icon(
                             imageVector = Icons.Default.Edit,
@@ -213,9 +215,11 @@ fun ShowDiaryDetailScreen(
                 BottomAppBarContent(
                     navigationIcon = {
                         IconButton(onClick = {
-                            diaryDetailViewModel.selectedDiary.value?.let { selectedDiary ->
-                                scope.launch(Dispatchers.IO) {
-                                    diaryDao.delete(selectedDiary)
+                            scope.launch(Dispatchers.IO) {
+                                val diary =
+                                    diaryDao.loadAllByIds(diaryDetailViewModel.uidState.value)
+                                diary?.let {
+                                    diaryDao.delete(diary)
                                 }
                             }
                             val intent = Intent(context, HomeActivity::class.java)
@@ -265,6 +269,7 @@ fun ShowDiaryDetailScreen(
                     .padding(innerPadding)
             ) {
                 LazyColumn {
+                    // 제목 필드
                     item {
                         val text1 by diaryDetailViewModel.titleState.collectAsState()
                         TextField(
@@ -278,21 +283,22 @@ fun ShowDiaryDetailScreen(
                                 containerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
-                            )
+                            ),
+                            enabled = isEditing
                         )
                     }
                     // 이미지 필드
                     item {
+                        val imageUris by diaryDetailViewModel.imageUris.collectAsState()
                         MultiImageLoader(
                             mediaLauncher = mediaLauncher,
-                            selectUris = diaryDetailViewModel.imageUris.value,
+                            selectUris = imageUris,
                             context = context,
                             onImagesUpdated = { newImageUris ->
                                 diaryDetailViewModel.updateImageUris(newImageUris)
                             }
                         )
                     }
-
                     // bgm필드
                     item {
                         val text2 by diaryDetailViewModel.bgmState.collectAsState()
@@ -308,15 +314,17 @@ fun ShowDiaryDetailScreen(
                                 containerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
-                            )
+                            ),
+                            enabled = isEditing
                         )
                     }
-                    // 일기 내용 필드
+                    // 내용 필드
                     item {
                         val text3 by diaryDetailViewModel.mainTextState.collectAsState()
                         TextField(
                             value = text3,
-                            onValueChange = { diaryDetailViewModel.updateMainText(it)
+                            onValueChange = {
+                                diaryDetailViewModel.updateMainText(it)
                             },
                             label = { Text("일기 내용을 적어보세요 :) ") },
                             modifier = Modifier
@@ -326,12 +334,18 @@ fun ShowDiaryDetailScreen(
                                 containerColor = Color.Transparent,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent
-                            )
+                            ),
+                            enabled = isEditing
                         )
                     }
+                    // 날짜 필드
                     item {
                         Text(
-                            text = diaryDetailViewModel.date.value.format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
+                            text = diaryDetailViewModel.date.value.format(
+                                DateTimeFormatter.ofPattern(
+                                    "yyyy.MM.dd"
+                                )
+                            ),
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier
                                 .fillMaxWidth()

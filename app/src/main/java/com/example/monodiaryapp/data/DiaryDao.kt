@@ -15,8 +15,10 @@ interface DiaryDao {
     fun getAll(): Flow<List<DiaryEntry>>
 
     @Query("SELECT * FROM DiaryEntry WHERE uid = :entryId")
-    fun loadAllByIds(entryId: Long): Flow<DiaryEntry?>
+    fun loadAllByIdsFlow(entryId: Long): Flow<DiaryEntry?>
 
+    @Query("SELECT * FROM DiaryEntry WHERE uid = :entryId")
+    fun loadAllByIds(entryId: Long): DiaryEntry?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEntry(entry: DiaryEntry)

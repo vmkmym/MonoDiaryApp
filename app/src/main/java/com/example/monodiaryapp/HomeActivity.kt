@@ -134,6 +134,7 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
                     putExtra("bgm", clickedDiary.bgm)
                     putExtra("content", clickedDiary.content)
                     putExtra("date", clickedDiary.date)
+                    putExtra("uid", clickedDiary.uid)
                 }
                 context.startActivity(intent)
             }
