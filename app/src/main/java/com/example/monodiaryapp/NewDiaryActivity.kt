@@ -51,7 +51,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 
-class AddDiaryActivity : ComponentActivity() {
+class NewDiaryActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
     private lateinit var editViewModel: EditViewModel
 
@@ -303,7 +303,7 @@ fun EditScreen(
                     }
                     // bgm필드
                     item {
-                        val editMyText2 by editViewModel.titleState.collectAsState()
+                        val editMyText2 by editViewModel.bgmState.collectAsState()
                         TextField(
                             value = editMyText2,
                             onValueChange = { editViewModel.updateBgm(it) },
@@ -321,7 +321,7 @@ fun EditScreen(
                     }
                     // 일기 내용 필드
                     item {
-                        val editMyText3 by editViewModel.titleState.collectAsState()
+                        val editMyText3 by editViewModel.mainTextState.collectAsState()
                         TextField(
                             value = editMyText3,
                             onValueChange = {

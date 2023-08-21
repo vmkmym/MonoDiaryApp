@@ -295,7 +295,7 @@ fun ShowDiaryDetailScreen(
 
                     // bgm필드
                     item {
-                        val text2 by diaryDetailViewModel.titleState.collectAsState()
+                        val text2 by diaryDetailViewModel.bgmState.collectAsState()
                         TextField(
                             value = text2,
                             onValueChange = { diaryDetailViewModel.updateBgm(it) },
@@ -313,7 +313,7 @@ fun ShowDiaryDetailScreen(
                     }
                     // 일기 내용 필드
                     item {
-                        val text3 by diaryDetailViewModel.titleState.collectAsState()
+                        val text3 by diaryDetailViewModel.mainTextState.collectAsState()
                         TextField(
                             value = text3,
                             onValueChange = { diaryDetailViewModel.updateMainText(it)

@@ -98,7 +98,7 @@ fun HomeScreen(database: DiaryDatabase) {
                 actionIcon = {
                     IconButton(
                         onClick = {
-                            val intent = Intent(context, AddDiaryActivity::class.java)
+                            val intent = Intent(context, NewDiaryActivity::class.java)
                             context.startActivity(intent)
                         }) {
                         Icon(

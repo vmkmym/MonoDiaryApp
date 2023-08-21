@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">MonoDiaryApp</string>
     <string name="title_activity_home">HomeActivity</string>
-    <string name="title_activity_edit">EditActivity</string>
+    <string name="title_activity_edit_diary">EditDiaryActivity</string>
+    <string name="title_activity_new_diary">NewDiaryActivity</string>
     <string name="title_activity_gallery">GalleryActivity</string>
 </resources>

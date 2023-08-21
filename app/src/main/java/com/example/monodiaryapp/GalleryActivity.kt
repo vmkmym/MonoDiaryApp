@@ -15,7 +15,6 @@ class GalleryActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MonoDiaryAppTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

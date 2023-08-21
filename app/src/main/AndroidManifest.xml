@@ -18,14 +18,14 @@
             android:label="@string/title_activity_gallery"
             android:theme="@style/Theme.MonoDiaryApp" />
         <activity
-            android:name=".AddDiaryActivity"
+            android:name=".NewDiaryActivity"
             android:exported="false"
-            android:label="AddDiaryActivity"
+            android:label="@string/title_activity_new_diary"
             android:theme="@style/Theme.MonoDiaryApp" />
         <activity
             android:name=".EditDiaryActivity"
             android:exported="false"
-            android:label="EditDiaryActivity"
+            android:label="@string/title_activity_edit_diary"
             android:theme="@style/Theme.MonoDiaryApp" />
         <activity
             android:name=".HomeActivity"
