@@ -19,20 +19,9 @@ class GalleryActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-//                    PhotoGrid()
                 }
             }
         }
     }
 }
 
-//@Composable
-//fun PhotoGrid(photos: List<Photo>) {
-//    LazyVerticalGrid(
-//        columns = GridCells.Adaptive(minSize = 128.dp)
-//    ) {
-//        items(photos) { photo ->
-//            PhotoItem(photo)
-//        }
-//    }
-//}

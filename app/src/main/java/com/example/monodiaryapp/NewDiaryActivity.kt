@@ -114,6 +114,11 @@ fun EditScreen(
                 title = "Today",
                 navigationIcon = {
                     IconButton(onClick = {
+                        diaryViewModel.updateTitle(diaryViewModel.titleState.value)
+                        diaryViewModel.updateMainText(diaryViewModel.mainTextState.value)
+                        diaryViewModel.updateImageUris(diaryViewModel.imageUris.value)
+                        diaryViewModel.updateBgm(diaryViewModel.bgmState.value)
+
                         val newDiary = DiaryEntry(
                             title = diaryViewModel.titleState.value,
                             content = diaryViewModel.mainTextState.value,
@@ -121,9 +126,11 @@ fun EditScreen(
                             bgm = diaryViewModel.bgmState.value,
                             date = diaryViewModel.dateState.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         )
+                        // 삭제처럼 추가
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
+
                         val intent = Intent(context, HomeActivity::class.java)
                         intent.putExtra("title", diaryViewModel.titleState.value)
                         intent.putExtra("selectUris", diaryViewModel.imageUris.value.toTypedArray())
@@ -131,6 +138,7 @@ fun EditScreen(
                         intent.putExtra("mainText", diaryViewModel.mainTextState.value)
                         intent.putExtra("date", formattedLastModified)
                         context.startActivity(intent)
+
                     }) {
                         Icon(
                             imageVector = Icons.Default.Done,

@@ -1,5 +1,6 @@
 package com.example.monodiaryapp
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -31,25 +32,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
+import com.example.monodiaryapp.viewmodel.DiaryViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-
 class HomeActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
+    private lateinit var diaryViewModel: DiaryViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MonoDiaryAppTheme {
-                val database = remember { DiaryDatabase.getDatabase(this) }
+                val context = LocalContext.current
+                val database = remember { DiaryDatabase.getDatabase(context) }
                 diaryDao = database.diaryDao()
-                HomeScreen(database)
+                diaryViewModel = ViewModelProvider(this)[DiaryViewModel::class.java]
+                HomeScreen(database, diaryViewModel)
             }
         }
     }
@@ -81,7 +86,7 @@ fun MyCenteredTopAppBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(database: DiaryDatabase) {
+fun HomeScreen(database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -115,14 +120,15 @@ fun HomeScreen(database: DiaryDatabase) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                DiaryList(context, database)
+                DiaryList(context, database, diaryViewModel)
             }
         }
     )
 }
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun DiaryList(context: Context, database: DiaryDatabase) {
+fun DiaryList(context: Context, database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
     val diaryListFlow = database.diaryDao().getAll()
     val diaryListState by diaryListFlow.collectAsState(initial = emptyList())
 

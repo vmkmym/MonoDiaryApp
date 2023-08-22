@@ -37,18 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.monodiaryapp.data.DiaryDao
 import com.example.monodiaryapp.data.DiaryDatabase
-import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import com.example.monodiaryapp.viewmodel.DiaryViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 
@@ -56,6 +51,7 @@ class EditDiaryActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
     private lateinit var diaryViewModel: DiaryViewModel
 
+    @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -100,6 +96,7 @@ class EditDiaryActivity : ComponentActivity() {
         }
     }
 }
+
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -394,8 +391,7 @@ private fun MultiImageLoader(
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.3f)
-                    .aspectRatio(1f)
+                    .fillMaxWidth()
             ) {
                 bitmap?.asImageBitmap()?.let {
                     Image(

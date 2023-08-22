@@ -29,6 +29,7 @@ abstract class DiaryDatabase : RoomDatabase() {
         }
     }
 }
+
 // 데이터베이스가 이 타입컨버터를 사용하여 데이터를 변환하게 함
 // List<Uri> 타입을 문자열로 변환하고 데이터베이스에 저장하도록 지정 (역변환도 구현)
 class UriListTypeConverter {

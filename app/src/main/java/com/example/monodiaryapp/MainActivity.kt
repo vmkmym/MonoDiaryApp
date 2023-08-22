@@ -1,5 +1,6 @@
 package com.example.monodiaryapp
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,9 +20,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import kotlinx.coroutines.delay
 
@@ -29,20 +32,25 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MonoDiaryAppTheme {
-                LaunchedEffect(true) {
-                    delay(3000)
-                    val intent = Intent(this@MainActivity, HomeActivity::class.java)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(intent)
-                    finish()
-                }
-                ShowInitialScreen()
-            }
+            MainScreen()
         }
     }
 }
 
+@Composable
+private fun MainScreen() {
+    val context = LocalContext.current as? Activity
+    MonoDiaryAppTheme {
+        LaunchedEffect(true) {
+            delay(3000)
+            val intent = Intent(context, HomeActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context?.startActivity(intent)
+            context?.finish()
+        }
+        ShowInitialScreen()
+    }
+}
 
 @Composable
 fun ShowInitialScreen() {
@@ -74,13 +82,5 @@ fun ShowInitialScreen() {
                 .align(Alignment.CenterHorizontally),
             contentScale = ContentScale.Crop
         )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MonoDiaryAppTheme {
-        ShowInitialScreen()
     }
 }
