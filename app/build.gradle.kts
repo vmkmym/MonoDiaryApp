@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-text-android:1.5.0")
     implementation("androidx.compose.material:material:1.5.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.8.0")
+    implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation(platform("androidx.compose:compose-bom:2023.03.00"))
     implementation(platform("androidx.compose:compose-bom:2023.03.00"))
@@ -77,17 +77,22 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     // 룸
-    val room_version = "2.5.2"
-    implementation("androidx.room:room-runtime:$room_version")
-    implementation("androidx.room:room-ktx:$room_version")
-    annotationProcessor("androidx.room:room-compiler:$room_version")
+    val roomVersion = "2.5.2"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    annotationProcessor("androidx.room:room-compiler:$roomVersion")
 
     // 뷰모델
-    val lifecycle_version = "2.5.1"
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version")
+    val lifecycleVersion = "2.6.1"
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion")
 
     // To use Kotlin Symbol Processing (KSP)
-    ksp("androidx.room:room-compiler:$room_version")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+    // Kotlin 코루틴이 지원하는 Android용 이미지 로딩 라이브러리, Co routine I mage L oader 의 약어
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation ("com.google.accompanist:accompanist-coil:0.17.0")
+
 }
 
 

@@ -46,53 +46,53 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
-
 class EditDiaryActivity : ComponentActivity() {
-    private lateinit var diaryDao: DiaryDao
-    private lateinit var diaryViewModel: DiaryViewModel
-
-    @SuppressLint("StateFlowValueCalledInComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MonoDiaryAppTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val context = LocalContext.current
-                    val database = remember { DiaryDatabase.getDatabase(context) }
-                    val diaryDao = database.diaryDao()
+            EditDiaryContent(intent, this)
+        }
+    }
+}
 
-                    val title = intent.getStringExtra("title") ?: ""
-                    val mainText = intent.getStringExtra("content") ?: ""
-                    val bgm = intent.getStringExtra("bgm") ?: ""
-                    val uid = intent.getLongExtra("uid", 0)
+@Composable
+fun EditDiaryContent(startingIntent: Intent, activity: ComponentActivity) {
+    MonoDiaryAppTheme {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            val context = LocalContext.current
+            val database = remember { DiaryDatabase.getDatabase(context) }
+            val diaryDao = database.diaryDao()
 
-                    diaryViewModel = ViewModelProvider(this)[DiaryViewModel::class.java]
-                    diaryViewModel.initialize(title, mainText, bgm, uid)
+            val title = startingIntent.getStringExtra("title") ?: ""
+            val mainText = startingIntent.getStringExtra("content") ?: ""
+            val bgm = startingIntent.getStringExtra("bgm") ?: ""
+            val uid = startingIntent.getLongExtra("uid", 0)
 
-                    val mediaLauncher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.PickMultipleVisualMedia(),
-                        onResult = { uris ->
-                            for (uri in uris) {
-                                // 해당 Uri에 영구적인 권한 부여
-                                val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                context.contentResolver.takePersistableUriPermission(uri, flag)
-                            }
-                            diaryViewModel.updateImageUris(uris)
-                        }
-                    )
-                    ShowDiaryDetailScreen(
-                        mediaLauncher = mediaLauncher,
-                        context = context,
-                        diaryDao = diaryDao,
-                        diaryViewModel = diaryViewModel
-                    )
-                }
+            val diaryViewModel = remember {
+                ViewModelProvider(activity)[DiaryViewModel::class.java]
             }
-            val database = DiaryDatabase.getDatabase(this)
-            diaryDao = database.diaryDao()
+
+            diaryViewModel.initialize(title, mainText, bgm, uid)
+
+            val mediaLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.PickMultipleVisualMedia(),
+                onResult = { uris ->
+                    for (uri in uris) {
+                        // 해당 Uri에 영구적인 권한 부여
+                        val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        context.contentResolver.takePersistableUriPermission(uri, flag)
+                    }
+                    diaryViewModel.updateImageUris(uris)
+                }
+            )
+            ShowDiaryDetailScreen(
+                mediaLauncher = mediaLauncher,
+                diaryDao = diaryDao,
+                diaryViewModel = diaryViewModel
+            )
         }
     }
 }
@@ -103,10 +103,10 @@ class EditDiaryActivity : ComponentActivity() {
 @Composable
 fun ShowDiaryDetailScreen(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
-    context: Context,
     diaryDao: DiaryDao,
     diaryViewModel: DiaryViewModel
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isEditing by remember { mutableStateOf(false) }
 
@@ -125,7 +125,7 @@ fun ShowDiaryDetailScreen(
                                     selectedDiary.title = diaryViewModel.titleState.value
                                     selectedDiary.content = diaryViewModel.mainTextState.value
                                     selectedDiary.bgm = diaryViewModel.bgmState.value
-                                    selectedDiary.image = diaryViewModel.imageUris.value
+                                    selectedDiary.image = diaryViewModel.imageUris.value.toString()
                                     diaryDao.update(selectedDiary)
                                 }
                                 val intent = Intent(context, HomeActivity::class.java)
@@ -142,6 +142,19 @@ fun ShowDiaryDetailScreen(
                 actionIcon = {
                     IconButton(onClick = {
                         isEditing = !isEditing
+                        diaryViewModel.selectedDiary.value?.let {
+                            scope.launch(Dispatchers.IO) {
+                                val diary =
+                                    diaryDao.loadAllByIds(diaryViewModel.uidState.value)
+                                diary?.let { selectedDiary ->
+                                    selectedDiary.title = diaryViewModel.titleState.value
+                                    selectedDiary.content = diaryViewModel.mainTextState.value
+                                    selectedDiary.bgm = diaryViewModel.bgmState.value
+                                    selectedDiary.image = diaryViewModel.imageUris.value.toString()
+                                    diaryDao.update(selectedDiary)
+                                }
+                            }
+                        }
                     }) {
                         Icon(
                             imageVector = Icons.Default.Edit,
@@ -239,7 +252,6 @@ fun ShowDiaryDetailScreen(
                         MultiImageLoader(
                             mediaLauncher = mediaLauncher,
                             selectUris = imageUris,
-                            context = context,
                             onImagesUpdated = { newImageUris ->
                                 diaryViewModel.updateImageUris(newImageUris)
                             }
@@ -357,11 +369,10 @@ fun TopAppBarWithIcons(
 private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     selectUris: List<Uri?>,
-    context: Context,
     onImagesUpdated: (List<Uri>) -> Unit
 ) {
     val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
+    val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween

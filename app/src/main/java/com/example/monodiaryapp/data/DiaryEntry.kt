@@ -1,6 +1,5 @@
 package com.example.monodiaryapp.data
 
-import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -13,7 +12,7 @@ data class DiaryEntry(
     @PrimaryKey(autoGenerate = true) val uid: Long = 0,
     @ColumnInfo("title") var title: String,
     @ColumnInfo("content") var content: String,
-    @ColumnInfo("image") var image: List<Uri>,
+    @ColumnInfo("image") var image: List<String>,
     @ColumnInfo("bgm") var bgm: String,
     @ColumnInfo("date") var date: String,
 )

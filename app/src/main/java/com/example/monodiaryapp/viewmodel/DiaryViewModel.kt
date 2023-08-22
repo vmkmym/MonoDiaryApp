@@ -29,6 +29,7 @@ class DiaryViewModel : ViewModel() {
     private val _uidState = MutableStateFlow(0L)
     val uidState: StateFlow<Long> = _uidState
 
+
     fun initialize(
         initialTitle: String, initialMainText: String, initialBgm: String, initialUid
         : Long

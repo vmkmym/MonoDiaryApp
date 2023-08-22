@@ -27,13 +27,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
-import com.example.monodiaryapp.data.DiaryDao
+import coil.compose.rememberAsyncImagePainter
 import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
@@ -44,49 +43,32 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 class HomeActivity : ComponentActivity() {
-    private lateinit var diaryDao: DiaryDao
-    private lateinit var diaryViewModel: DiaryViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MonoDiaryAppTheme {
-                val context = LocalContext.current
-                val database = remember { DiaryDatabase.getDatabase(context) }
-                diaryDao = database.diaryDao()
-                diaryViewModel = ViewModelProvider(this)[DiaryViewModel::class.java]
-                HomeScreen(database, diaryViewModel)
-            }
+            HomeContent(this)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyCenteredTopAppBar(
-    title: String,
-    navigationIcon: @Composable () -> Unit,
-    actionIcon: @Composable () -> Unit
-) {
-    CenterAlignedTopAppBar(
-        title = {
-            Text(
-                text = title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp)
-            )
-        },
-        navigationIcon = navigationIcon,
-        actions = {
-            actionIcon()
-        }
-    )
+fun HomeContent(activity: ComponentActivity) {
+    val context = LocalContext.current
+    val database = DiaryDatabase.getDatabase(context)
+    val diaryDao = database.diaryDao()
+
+    val diaryViewModel = remember {
+        ViewModelProvider(activity)[DiaryViewModel::class.java]
+    }
+    MonoDiaryAppTheme {
+        HomeScreen(database)
+    }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
+fun HomeScreen(database: DiaryDatabase) {
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -120,7 +102,7 @@ fun HomeScreen(database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                DiaryList(context, database, diaryViewModel)
+                DiaryList(context, database)
             }
         }
     )
@@ -128,7 +110,7 @@ fun HomeScreen(database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun DiaryList(context: Context, database: DiaryDatabase, diaryViewModel: DiaryViewModel) {
+fun DiaryList(context: Context, database: DiaryDatabase) {
     val diaryListFlow = database.diaryDao().getAll()
     val diaryListState by diaryListFlow.collectAsState(initial = emptyList())
 
@@ -164,8 +146,8 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
                 .clickable { onItemClick(diary) },
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            ImagePreview()
+            // 이미지 미리보기 표시, 코일 라이브러리 사용, 타입 컨버터 db, entity
+            ImagePreview(diary.image)
 
             Spacer(modifier = Modifier.width(10.dp))
             Column(
@@ -210,23 +192,52 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyCenteredTopAppBar(
+    title: String,
+    navigationIcon: @Composable () -> Unit,
+    actionIcon: @Composable () -> Unit
+) {
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp)
+            )
+        },
+        navigationIcon = navigationIcon,
+        actions = {
+            actionIcon()
+        }
+    )
+}
+
 fun formatDateWithDayOfWeek(date: LocalDate): String {
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))
     return "$formattedDate $dayOfWeek"
 }
 
+// 이미지 미리보기
 @Composable
-fun ImagePreview() {
-    Image(
-        painter = painterResource(id = R.drawable.hhh),
-        contentDescription = null,
-        modifier = Modifier
-            .padding(16.dp)
-            .size(120.dp)
-            .clip(CircleShape),
-        contentScale = ContentScale.Crop
-    )
+fun ImagePreview(imageList: List<String>) {
+    val firstImage = imageList.firstOrNull() // 첫 번째 이미지만 표시
+    firstImage?.let { imageUrl ->
+        Image(
+            // COroutine Image Loader 라이브러리 (의존성)
+            painter = rememberAsyncImagePainter(model = imageUrl),
+            contentDescription = null,
+            modifier = Modifier
+                .padding(16.dp)
+                .size(120.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+    }
 }
 
 // 일정 글자 수 이하의 본문만 표시 하는 firstLineOrMaxLength()
