@@ -210,16 +210,6 @@ fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
     }
 }
 
-private fun navigateToDiaryDetailScreen(context: Context, diaryEntry: DiaryEntry) {
-    val intent = Intent(context, EditDiaryActivity::class.java).apply {
-        putExtra("title", diaryEntry.title)
-        putExtra("bgm", diaryEntry.bgm)
-        putExtra("content", diaryEntry.content)
-        putExtra("date", diaryEntry.date)
-    }
-    context.startActivity(intent)
-}
-
 fun formatDateWithDayOfWeek(date: LocalDate): String {
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
     val formattedDate = date.format(DateTimeFormatter.ofPattern("yy.MM.dd"))

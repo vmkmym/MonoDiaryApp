@@ -47,7 +47,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-
 class NewDiaryActivity : ComponentActivity() {
     private lateinit var diaryDao: DiaryDao
     private lateinit var diaryViewModel: DiaryViewModel
@@ -126,7 +125,7 @@ fun EditScreen(
                             bgm = diaryViewModel.bgmState.value,
                             date = diaryViewModel.dateState.value.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         )
-                        // 삭제처럼 추가
+
                         scope.launch(Dispatchers.IO) {
                             diaryDao.insertAll(newDiary)
                         }
@@ -362,7 +361,9 @@ private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
     selectUris: List<Uri?>,
     context: Context,
-    onImagesUpdated: (List<Uri>) -> Unit
+    onImagesUpdated: (List<Uri>) -> Unit,
+    diaryDao: DiaryDao,
+    diaryViewModel: DiaryViewModel
 ) {
     val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
 
@@ -430,6 +431,35 @@ private fun MultiImageLoader(
     DisposableEffect(selectUris) {
         val nonNullUris = selectUris.filterNotNull()
         onImagesUpdated(nonNullUris)
+
+//        val selectedDiary = diaryViewModel.selectedDiary.value
+//        val uid = diaryViewModel.uidState.value
+//
+//        // 이미지 URI 변경 시에만 이미지를 업데이트
+//        if (selectedDiary != null) {
+//            val updatedDiary = selectedDiary.copy(
+//                image = nonNullUris
+//            )
+//
+//            viewModelScope.launch(Dispatchers.IO) {
+//                diaryDao.update(updatedDiary)
+//            }
+//        } else {
+//            // If no selected diary, create a new diary entry
+//            val newDiary = DiaryEntry(
+//                uid = uid,
+//                title = diaryViewModel.titleState.value,
+//                content = diaryViewModel.mainTextState.value,
+//                image = nonNullUris,
+//                bgm = diaryViewModel.bgmState.value,
+//                date = diaryViewModel.dateState.value.toString()
+//            )
+//
+//            viewModelScope.launch(Dispatchers.IO) {
+//                diaryDao.insertAll(newDiary)
+//            }
+//        }
+
         onDispose { }
     }
 }
