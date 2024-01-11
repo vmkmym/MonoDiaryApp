@@ -32,7 +32,7 @@
 
 
 ## 🚩 스크린샷
-    ![mockup_1](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/d98ead37-38bb-4f36-81e9-bf27a10196c0)
-    ![mockup_2](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/a3a6e82e-4f78-4050-ba3d-c8136aff75ce)
-    ![mockup_3](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/0d31a319-177c-4626-9137-5a57ea959413)
+![mockup_1](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/d98ead37-38bb-4f36-81e9-bf27a10196c0)
+![mockup_2](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/a3a6e82e-4f78-4050-ba3d-c8136aff75ce)
+![mockup_3](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/0d31a319-177c-4626-9137-5a57ea959413)
 
