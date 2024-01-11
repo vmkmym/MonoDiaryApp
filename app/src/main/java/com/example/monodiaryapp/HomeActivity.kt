@@ -3,6 +3,7 @@ package com.example.monodiaryapp
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -224,11 +225,11 @@ fun formatDateWithDayOfWeek(date: LocalDate): String {
 
 // 이미지 미리보기
 @Composable
-fun ImagePreview(imageList: List<String>) {
+fun ImagePreview(imageList: List<Uri>) {
     val firstImage = imageList.firstOrNull() // 첫 번째 이미지만 표시
     firstImage?.let { imageUrl ->
         Image(
-            // COroutine Image Loader 라이브러리 (의존성)
+            // Coroutine Image Loader 라이브러리 (의존성)
             painter = rememberAsyncImagePainter(model = imageUrl),
             contentDescription = null,
             modifier = Modifier

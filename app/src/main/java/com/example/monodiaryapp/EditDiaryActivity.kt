@@ -125,7 +125,9 @@ fun ShowDiaryDetailScreen(
                                     selectedDiary.title = diaryViewModel.titleState.value
                                     selectedDiary.content = diaryViewModel.mainTextState.value
                                     selectedDiary.bgm = diaryViewModel.bgmState.value
-                                    selectedDiary.image = diaryViewModel.imageUris.value.toString()
+                                    selectedDiary.image = diaryViewModel.imageUris.value.map { Uri.parse(
+                                        it.toString()
+                                    ) }
                                     diaryDao.update(selectedDiary)
                                 }
                                 val intent = Intent(context, HomeActivity::class.java)
@@ -150,7 +152,9 @@ fun ShowDiaryDetailScreen(
                                     selectedDiary.title = diaryViewModel.titleState.value
                                     selectedDiary.content = diaryViewModel.mainTextState.value
                                     selectedDiary.bgm = diaryViewModel.bgmState.value
-                                    selectedDiary.image = diaryViewModel.imageUris.value.toString()
+                                    selectedDiary.image = diaryViewModel.imageUris.value.map { Uri.parse(
+                                        it.toString()
+                                    ) }
                                     diaryDao.update(selectedDiary)
                                 }
                             }
@@ -365,6 +369,7 @@ fun TopAppBarWithIcons(
     )
 }
 
+@Suppress("DEPRECATION")
 @Composable
 private fun MultiImageLoader(
     mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
@@ -382,17 +387,15 @@ private fun MultiImageLoader(
                 context.contentResolver.takePersistableUriPermission(uri, flag)
             }
 
-            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                uri?.let {
+            val bitmap = uri?.let {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     ImageDecoder.decodeBitmap(
                         ImageDecoder.createSource(
                             context.contentResolver,
                             uri
                         )
                     )
-                }
-            } else {
-                uri?.let {
+                } else {
                     MediaStore.Images.Media.getBitmap(
                         context.contentResolver,
                         uri
@@ -412,7 +415,7 @@ private fun MultiImageLoader(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                mediaLauncher.launch(PickVisualMediaRequest())
                             }
                     )
                 }
@@ -427,7 +430,7 @@ private fun MultiImageLoader(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    mediaLauncher.launch(PickVisualMediaRequest())
                 }
         )
     }
@@ -438,5 +441,80 @@ private fun MultiImageLoader(
         onDispose { }
     }
 }
+
+
+//@Composable
+//private fun MultiImageLoader(
+//    mediaLauncher: ActivityResultLauncher<PickVisualMediaRequest>,
+//    selectUris: List<Uri?>,
+//    onImagesUpdated: (List<Uri>) -> Unit
+//) {
+//    val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+//    val context = LocalContext.current
+//    Row(
+//        modifier = Modifier.fillMaxWidth(),
+//        horizontalArrangement = Arrangement.SpaceBetween
+//    ) {
+//        for (uri in selectUris) {
+//            uri?.let {
+//                context.contentResolver.takePersistableUriPermission(uri, flag)
+//            }
+//
+//            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//                uri?.let {
+//                    ImageDecoder.decodeBitmap(
+//                        ImageDecoder.createSource(
+//                            context.contentResolver,
+//                            uri
+//                        )
+//                    )
+//                }
+//            } else {
+//                uri?.let {
+//                    MediaStore.Images.Media.getBitmap(
+//                        context.contentResolver,
+//                        uri
+//                    )
+//                }
+//            }
+//
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//            ) {
+//                bitmap?.asImageBitmap()?.let {
+//                    Image(
+//                        bitmap = it,
+//                        contentDescription = "선택한 이미지",
+//                        contentScale = ContentScale.FillWidth,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .clickable {
+//                                mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+//                            }
+//                    )
+//                }
+//            }
+//        }
+//    }
+//    if (selectUris.isEmpty()) {
+//        Image(
+//            painter = painterResource(id = R.drawable.hhh),
+//            contentDescription = "기본 이미지",
+//            contentScale = ContentScale.FillWidth,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .clickable {
+//                    mediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+//                }
+//        )
+//    }
+//    // 이미지 업데이트 후 onImagesUpdated 호출
+//    DisposableEffect(selectUris) {
+//        val nonNullUris = selectUris.filterNotNull()
+//        onImagesUpdated(nonNullUris)
+//        onDispose { }
+//    }
+//}
 
 // 코일 라이브러리 사용해서 이미지 해결하기

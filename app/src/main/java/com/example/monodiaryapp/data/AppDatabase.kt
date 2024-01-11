@@ -3,6 +3,7 @@ package com.example.monodiaryapp.data
 import android.content.Context
 import android.net.Uri
 import androidx.room.Database
+import androidx.room.ProvidedTypeConverter
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
@@ -10,9 +11,10 @@ import androidx.room.TypeConverters
 import java.time.LocalDate
 
 @Database(entities = [DiaryEntry::class], version = 1, exportSchema = false)
-@TypeConverters(UriListTypeConverter::class)
+@TypeConverters(UriListTypeConverter::class, LocalDateTypeConverter::class)
 abstract class DiaryDatabase : RoomDatabase() {
     abstract fun diaryDao(): DiaryDao
+
     companion object {
         @Volatile
         private var INSTANCE: DiaryDatabase? = null
@@ -22,7 +24,11 @@ abstract class DiaryDatabase : RoomDatabase() {
                     context.applicationContext,
                     DiaryDatabase::class.java,
                     "diary_database"
-                ).build()
+                )
+                    .addTypeConverter(UriListTypeConverter())
+                    .addTypeConverter(LocalDateTypeConverter())
+                    .build()
+
                 INSTANCE = instance
                 instance
             }
@@ -31,10 +37,7 @@ abstract class DiaryDatabase : RoomDatabase() {
 }
 
 
-/* 이미지의 Uri들을 String 형태로 변환하여 저장하고,
-필요할 때 다시 Uri로 변환하여 사용하는 것이 일반적인 방법입니다.
-타입 컨버터를 이용하여 Uri 리스트를 String으로 변환하고
-다시 String을 Uri 리스트로 변환하는 방식으로 해결 */
+@TypeConverters(UriListTypeConverter::class)
 class UriListTypeConverter {
     @TypeConverter
     fun fromUriList(uriList: List<Uri>): String {
@@ -47,7 +50,7 @@ class UriListTypeConverter {
     }
 }
 
-/* @TypeConverter를 사용하여 LocalDate를 데이터베이스에서 사용할 수 있는 형태로 변환 */
+@ProvidedTypeConverter
 class LocalDateTypeConverter {
     @TypeConverter
     fun fromLocalDate(localDate: LocalDate): String {
@@ -59,3 +62,4 @@ class LocalDateTypeConverter {
         return LocalDate.parse(localDateString)
     }
 }
+

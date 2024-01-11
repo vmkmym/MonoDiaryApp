@@ -9,7 +9,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
+import android.provider.MediaStore.Images.Media.getBitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -122,7 +122,7 @@ fun EditScreen(
                         val newDiary = DiaryEntry(
                             title = diaryViewModel.titleState.value,
                             content = diaryViewModel.mainTextState.value,
-                            image = diaryViewModel.imageUris.value.toString(),
+                            image = diaryViewModel.imageUris.value,
                             bgm = diaryViewModel.bgmState.value,
                             date = diaryViewModel.dateState.value.toString()
                         )
@@ -144,7 +144,6 @@ fun EditScreen(
                         )
                     }
                 },
-                //
                 actionIcon = {
                     IconButton(onClick = {
                         diaryViewModel.selectedDiary.value?.let {
@@ -155,7 +154,7 @@ fun EditScreen(
                                     selectedDiary.title = diaryViewModel.titleState.value
                                     selectedDiary.content = diaryViewModel.mainTextState.value
                                     selectedDiary.bgm = diaryViewModel.bgmState.value
-                                    selectedDiary.image = diaryViewModel.imageUris.value.toString()
+                                    selectedDiary.image = diaryViewModel.imageUris.value
                                     diaryDao.update(selectedDiary)
                                 }
                             }
@@ -395,7 +394,7 @@ private fun MultiImageLoader(
                 }
             } else {
                 uri?.let {
-                    MediaStore.Images.Media.getBitmap(
+                    getBitmap(
                         context.contentResolver,
                         uri
                     )
@@ -445,7 +444,7 @@ private fun MultiImageLoader(
         // 이미지 URI 변경 시에만 이미지 업데이트
         if (selectedDiary != null) {
             val updatedDiary = selectedDiary.copy(
-                image = nonNullUris.joinToString(separator = ",") { it.toString() }
+                image = diaryViewModel.imageUris.value,
             )
             // viewModelScope를 통해 백그라운드에서 작업 수행
             diaryViewModel.viewModelScope.launch(Dispatchers.IO) {
@@ -458,7 +457,7 @@ private fun MultiImageLoader(
                 uid = uid,
                 title = diaryViewModel.titleState.value,
                 content = diaryViewModel.mainTextState.value,
-                image = nonNullUris.joinToString(separator = ",") { it.toString() },
+                image = diaryViewModel.imageUris.value,
                 bgm = diaryViewModel.bgmState.value,
                 date = diaryViewModel.dateState.value.toString()
             )
@@ -471,5 +470,3 @@ private fun MultiImageLoader(
         onDispose { }
     }
 }
-
-
