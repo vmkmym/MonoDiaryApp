@@ -21,23 +21,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
 import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import coil.request.ImageRequest
 import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
-import com.example.monodiaryapp.viewmodel.DiaryViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -47,20 +48,16 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HomeContent(this)
+            HomeContent()
         }
     }
 }
 
 @Composable
-fun HomeContent(activity: ComponentActivity) {
+fun HomeContent() {
     val context = LocalContext.current
     val database = DiaryDatabase.getDatabase(context)
-    val diaryDao = database.diaryDao()
 
-    val diaryViewModel = remember {
-        ViewModelProvider(activity)[DiaryViewModel::class.java]
-    }
     MonoDiaryAppTheme {
         HomeScreen(database)
     }
@@ -117,7 +114,7 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
 
     LazyColumn {
         items(diaryListState) { diaryEntry ->
-            DiaryItem(diaryEntry) { clickedDiary ->
+            DiaryItem(diaryEntry, onItemClick = { clickedDiary: DiaryEntry ->
                 val intent = Intent(context, EditDiaryActivity::class.java).apply {
                     putExtra("title", clickedDiary.title)
                     putExtra("bgm", clickedDiary.bgm)
@@ -126,13 +123,16 @@ fun DiaryList(context: Context, database: DiaryDatabase) {
                     putExtra("uid", clickedDiary.uid)
                 }
                 context.startActivity(intent)
-            }
+            })
         }
     }
 }
 
 @Composable
-fun DiaryItem(diary: DiaryEntry, onItemClick: (DiaryEntry) -> Unit) {
+fun DiaryItem(
+    diary: DiaryEntry,
+    onItemClick: (DiaryEntry) -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -227,11 +227,28 @@ fun formatDateWithDayOfWeek(date: LocalDate): String {
 @Composable
 fun ImagePreview(imageList: List<Uri>) {
     val firstImage = imageList.firstOrNull() // 첫 번째 이미지만 표시
-    firstImage?.let { imageUrl ->
+    val defaultImageResId = R.drawable.hhh
+
+    if (firstImage != null) {
+        val imagePainter = rememberAsyncImagePainter(
+            ImageRequest.Builder(LocalContext.current).data(data = firstImage).apply {
+                fallback(defaultImageResId)
+            }.build()
+        )
+
         Image(
-            // Coroutine Image Loader 라이브러리 (의존성)
-            painter = rememberAsyncImagePainter(model = imageUrl),
-            contentDescription = null,
+            painter = imagePainter,
+            contentDescription = "이미지 미리보기",
+            modifier = Modifier
+                .padding(16.dp)
+                .size(120.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Image(
+            painter = painterResource(id = defaultImageResId),
+            contentDescription = "기본 이미지",
             modifier = Modifier
                 .padding(16.dp)
                 .size(120.dp)
@@ -253,5 +270,13 @@ fun String.firstLineOrMaxLength(maxLength: Int): String {
         } else {
             firstLine
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewHomeContent() {
+    MonoDiaryAppTheme {
+        HomeContent()
     }
 }

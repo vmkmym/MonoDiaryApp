@@ -119,16 +119,13 @@ fun ShowDiaryDetailScreen(
                         // selectedDiary 는 DiaryEntry 객체를 가르킨다.
                         if (isEditing) {
                             scope.launch(Dispatchers.IO) {
-                                val diary =
-                                    diaryDao.loadAllByIds(diaryViewModel.uidState.value)
-                                diary?.let { selectedDiary ->
-                                    selectedDiary.title = diaryViewModel.titleState.value
-                                    selectedDiary.content = diaryViewModel.mainTextState.value
-                                    selectedDiary.bgm = diaryViewModel.bgmState.value
-                                    selectedDiary.image = diaryViewModel.imageUris.value.map { Uri.parse(
-                                        it.toString()
-                                    ) }
-                                    diaryDao.update(selectedDiary)
+                                val diary = diaryDao.loadAllByIds(diaryViewModel.uidState.value)
+                                if (diary != null) {
+                                    diary.title = diaryViewModel.titleState.value
+                                    diary.content = diaryViewModel.mainTextState.value
+                                    diary.bgm = diaryViewModel.bgmState.value
+                                    diary.image = diaryViewModel.imageUris.value.map { Uri.parse(it.toString()) }
+                                    diaryDao.update(diary)
                                 }
                                 val intent = Intent(context, HomeActivity::class.java)
                                 context.startActivity(intent)
@@ -407,10 +404,21 @@ private fun MultiImageLoader(
                 modifier = Modifier
                     .fillMaxWidth()
             ) {
-                bitmap?.asImageBitmap()?.let {
+                if (bitmap != null) {
                     Image(
-                        bitmap = it,
+                        bitmap = bitmap.asImageBitmap(),
                         contentDescription = "선택한 이미지",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                mediaLauncher.launch(PickVisualMediaRequest())
+                            }
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.hhh),
+                        contentDescription = "기본 이미지",
                         contentScale = ContentScale.FillWidth,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -422,7 +430,7 @@ private fun MultiImageLoader(
             }
         }
     }
-    if (selectUris.isEmpty()) {
+    if (selectUris.isEmpty() || selectUris.all { it == null }) {
         Image(
             painter = painterResource(id = R.drawable.hhh),
             contentDescription = "기본 이미지",

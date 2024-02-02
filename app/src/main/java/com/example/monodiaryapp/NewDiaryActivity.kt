@@ -44,6 +44,7 @@ import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import com.example.monodiaryapp.ui.theme.MonoDiaryAppTheme
 import com.example.monodiaryapp.viewmodel.DiaryViewModel
+import com.example.monodiaryapp.viewmodel.DiaryViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate

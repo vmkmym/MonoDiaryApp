@@ -10,33 +10,6 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import java.time.LocalDate
 
-@Database(entities = [DiaryEntry::class], version = 1, exportSchema = false)
-@TypeConverters(UriListTypeConverter::class, LocalDateTypeConverter::class)
-abstract class DiaryDatabase : RoomDatabase() {
-    abstract fun diaryDao(): DiaryDao
-
-    companion object {
-        @Volatile
-        private var INSTANCE: DiaryDatabase? = null
-        fun getDatabase(context: Context): DiaryDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    DiaryDatabase::class.java,
-                    "diary_database"
-                )
-                    .addTypeConverter(UriListTypeConverter())
-                    .addTypeConverter(LocalDateTypeConverter())
-                    .build()
-
-                INSTANCE = instance
-                instance
-            }
-        }
-    }
-}
-
-
 @TypeConverters(UriListTypeConverter::class)
 class UriListTypeConverter {
     @TypeConverter
@@ -50,16 +23,31 @@ class UriListTypeConverter {
     }
 }
 
-@ProvidedTypeConverter
-class LocalDateTypeConverter {
-    @TypeConverter
-    fun fromLocalDate(localDate: LocalDate): String {
-        return localDate.toString()
-    }
 
-    @TypeConverter
-    fun toLocalDate(localDateString: String): LocalDate {
-        return LocalDate.parse(localDateString)
+
+@ProvidedTypeConverter
+@Database(entities = [DiaryEntry::class], version = 1, exportSchema = false)
+@TypeConverters(UriListTypeConverter::class)
+abstract class DiaryDatabase : RoomDatabase() {
+    abstract fun diaryDao(): DiaryDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: DiaryDatabase? = null
+        fun getDatabase(context: Context): DiaryDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    DiaryDatabase::class.java,
+                    "diary_database"
+                )
+                    .build()
+
+                INSTANCE = instance
+                instance
+            }
+        }
     }
 }
+
 

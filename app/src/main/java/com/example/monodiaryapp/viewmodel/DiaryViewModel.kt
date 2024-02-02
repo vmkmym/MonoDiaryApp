@@ -2,6 +2,8 @@ package com.example.monodiaryapp.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.monodiaryapp.data.DiaryDatabase
 import com.example.monodiaryapp.data.DiaryEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,5 +55,15 @@ class DiaryViewModel : ViewModel() {
 
     fun updateImageUris(newImageUris: List<Uri>) {
         _imageUris.value = newImageUris
+    }
+}
+
+class DiaryViewModelFactory : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(DiaryViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return DiaryViewModel() as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
