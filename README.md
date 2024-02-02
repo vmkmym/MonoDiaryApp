@@ -1,5 +1,4 @@
-![Black and Yellow Modern Social Media Marketing Trends Video Presentation](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/c14c2a60-6105-4dc2-b629-a183a05dfc4a)
-
+![Mono Diary](https://github.com/vmkmym/MonoDiaryApp/assets/71699054/b4f11147-119e-45be-89ab-cf5922ca76bb)
 
 
 
